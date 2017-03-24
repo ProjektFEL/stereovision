@@ -17,7 +17,7 @@ using namespace std;
 class IDisparity {
 public:
 	virtual ~IDisparity(){};
-	virtual void calculate() = 0;
+	virtual void calculate(Mat frameLeft, Mat frameRight) = 0;
 	virtual Mat getDisparity() = 0;
 	virtual Mat getDepth() = 0;
 	virtual Mat getLeft() = 0;

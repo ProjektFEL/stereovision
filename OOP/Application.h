@@ -58,9 +58,15 @@ public:
 		while (1)
 		{
 			capture->process();
-			if (!capture->getLeftRGB().empty() && !capture->getRightRGB().empty()){
-				imshow("video 1", capture->getLeftRGB());
-				imshow("video 2", capture->getRightRGB());
+			Mat frameLeft, frameRight, frameDisparity;
+			frameLeft = capture->getLeftRGB();
+			frameRight = capture->getRightRGB();
+			if (!frameLeft.empty() && !frameRight.empty()){
+				disparity->calculate(frameLeft, frameRight);
+				frameDisparity = disparity->getDisparity();
+				imshow("video 1", frameLeft);
+				imshow("video 2", frameRight);
+				imshow("disparita", frameDisparity);
 			}
 			waitKey(1);
 

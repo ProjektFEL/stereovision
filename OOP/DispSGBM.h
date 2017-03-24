@@ -9,29 +9,24 @@ private:
 	Mat imgLeft, imgRight;
 	VideoCapture cap1;
 	//string filename = "0";
-	VideoCapture cap0 = VideoCapture("C:\\Users\\Gamer\\Desktop\\video.MTS");
+	
 public:
 	DispSGBM()
 	{
 		vmin = 1, vmax = 3, smin = 0, mdip = 43, ndip = 10, sp1 = 266, sp2 = 4782,
 		dmd = 99, pfc = 5, sur = 17, sws = 10, ssr = 10, sm = 10, bsiz = 4;
-		//cap0.open(0);
-		//cap1.open("C:\\Users\\Gamer\\Desktop\\video\\right.mp4");
-		//cap0.open(filename);
-		cap0.set(CV_CAP_PROP_FRAME_HEIGHT, 320);
-		cap0.set(CV_CAP_PROP_FRAME_WIDTH, 240);
-		cap0.set(CV_CAP_PROP_FPS, 30);
+		
 	}
 
 	~DispSGBM()
 	{}
 
 
-	virtual void calculate()
+	virtual void calculate(Mat frameLeft, Mat frameRight)
 	{
 
 		//Mat frame;
-		cap0 >> imgLeft;
+		//cap0 >> imgLeft;
 		//cap1.read(imgRight);
 
 			if (vmax == 0) vmax = 1;
@@ -47,9 +42,10 @@ public:
 			sgbm->setSpeckleWindowSize(sws - 10);
 			sgbm->setSpeckleRange(ssr - 10);
 
-			sgbm->compute(imgLeft, imgRight, disparity);
-			imshow("edges", imgLeft);
-			waitKey(1);
+			sgbm->compute(frameLeft, frameRight, disparity);
+			disparity.convertTo(disparity, CV_8U, 255);
+			/*imshow("edges", frameLeft);
+			waitKey(1);*/
 	}
 
 	Mat getLeft()
