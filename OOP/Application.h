@@ -12,9 +12,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
-#include "opencv2/ximgproc.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include "opencv2/video/background_segm.hpp"
+
 
 using namespace cv;
 using namespace std;
@@ -35,17 +33,14 @@ public:
 
 		__if_exists(CapZEN3D)
 		{
-			capture = new CapZEN3D();
+			capture = new CapZEN3D(1,2);   // tu pridat do parametrov konstruktora, nastavenia z suboru .ini, aby sa nacitaval spravny vstup
 		}
 		//tu inicializujes dalsie objekty napr. procCascades ...
 	}
 
 	void cycle()
 	{
-		VideoCapture cap0 = VideoCapture("C:\\Users\\Gamer\\Desktop\\video\\left.mp4");
-		VideoCapture cap1 = VideoCapture("C:\\Users\\Gamer\\Desktop\\video\\right.mp4");
-		Mat left, right;
-		Mat rgb, depth, object;
+		
 		//int wheel; //bool direction; int strength, bool brake;
 		
 		//rgb = capture->getRGB();
@@ -62,10 +57,16 @@ public:
 		//tu sa budu volat metody a robit hlavny tok
 		while (1)
 		{
-			//capture->process();
-			//disparity->calculate();
+			capture->process();
+			if (!capture->getLeftRGB().empty() && !capture->getRightRGB().empty()){
+				imshow("video 1", capture->getLeftRGB());
+				imshow("video 2", capture->getRightRGB());
+			}
+			waitKey(1);
 
-			disparity->calculate();
+
+
+			//disparity->calculate();
 			
 			if (waitKey(30) >= 0) break;
 		}

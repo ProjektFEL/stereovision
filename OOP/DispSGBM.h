@@ -49,6 +49,7 @@ public:
 
 			sgbm->compute(imgLeft, imgRight, disparity);
 			imshow("edges", imgLeft);
+			waitKey(1);
 	}
 
 	Mat getLeft()
