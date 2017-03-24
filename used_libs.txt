@@ -1,0 +1,2 @@
+opencv 3.1 (win), u can download it from: https://drive.google.com/open?id=0B5ee1UBvFpdad1M4V0piLUFyOFU
+c++ boost 1_63_0, u can download it from: http://www.boost.org/users/history/version_1_63_0.html

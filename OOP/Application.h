@@ -5,6 +5,9 @@
 #include "ICapture.h"
 #include "CapZEN3D.h"
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <stdio.h>
 #include <string>
@@ -16,12 +19,14 @@
 
 using namespace cv;
 using namespace std;
+using namespace boost;
 
 class Application{
 private:
 	//definicia objektov typu interface
 	IDisparity *disparity;
 	ICapture *capture;
+	property_tree::ptree pt;  // citac .ini suborov
 public:
 	void init()
 	{
@@ -33,7 +38,22 @@ public:
 
 		__if_exists(CapZEN3D)
 		{
-			capture = new CapZEN3D(1,2);   // tu pridat do parametrov konstruktora, nastavenia z suboru .ini, aby sa nacitaval spravny vstup
+			property_tree::ini_parser::read_ini("config.ini", pt);
+			string strPath1 = pt.get<string>("VideoInput.VideoInput1");
+			string strPath2 = pt.get<string>("VideoInput.VideoInput2");
+			int iPath1,iPath2;
+			try
+			{
+				int iPath1 = boost::lexical_cast<int>(strPath1);
+				int iPath2 = boost::lexical_cast<int>(strPath2);
+
+				capture = new CapZEN3D(iPath1, iPath2);
+			}
+			catch (...)
+			{
+				capture = new CapZEN3D(strPath1, strPath2);
+			}
+			   // tu pridat do parametrov konstruktora, nastavenia z suboru .ini, aby sa nacitaval spravny vstup
 		}
 		//tu inicializujes dalsie objekty napr. procCascades ...
 	}

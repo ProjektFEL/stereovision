@@ -1,0 +1,1 @@
+vo vs treba mat config.ini subor v zlozke s nazvom projektu napr. nazov_projektu/nazov_projektu/sem umiestni
