@@ -1,8 +1,11 @@
 
 #include "IDisparity.h"
 #include "DispSGBM.h"
+#include "ProcessA.h"
+#include "ProcessB.h"
 #include "IControl.h"
 #include "ICapture.h"
+#include "IProcess.h"
 #include "CapZEN3D.h"
 
 #include <boost/property_tree/ptree.hpp>
@@ -26,6 +29,7 @@ private:
 	//definicia objektov typu interface
 	IDisparity *disparity;
 	ICapture *capture;
+	IProcess *processBirdview, *processLineDetect;
 	property_tree::ptree pt;  // citac .ini suborov
 public:
 	void init()
@@ -34,6 +38,15 @@ public:
 		__if_exists(IDisparity)
 		{
 			disparity = new DispSGBM();
+		}
+
+		__if_exists(IProcess)
+		{
+			processBirdview = new ProcessA();
+		}
+		__if_exists(IProcess)
+		{
+			processLineDetect = new ProcessB();
 		}
 
 		__if_exists(CapZEN3D)
@@ -78,22 +91,25 @@ public:
 		while (1)
 		{
 			capture->process();
-			Mat frameLeft, frameRight, frameDisparity;
+			Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLineAssist;
 			frameLeft = capture->getLeftRGB();
 			frameRight = capture->getRightRGB();
-			if (!frameLeft.empty() && !frameRight.empty()){
+			processBirdview->process(frameLeft, frameRight);
+			frameBirdView = processBirdview->getFrame();
+			processLineDetect->process(frameBirdView, frameRight);
+			frameLineAssist = processLineDetect->getFrame();
+			
+			if (!frameLeft.empty() && !frameRight.empty() && !frameBirdView.empty() && !frameLineAssist.empty()){
 				disparity->calculate(frameLeft, frameRight);
 				frameDisparity = disparity->getDisparity();
-				imshow("video 1", frameLeft);
-				imshow("video 2", frameRight);
+				imshow("video input 1", frameLeft);
+				imshow("video input 2", frameRight);
 				imshow("disparita", frameDisparity);
+				imshow("BirdView", frameBirdView);
+				imshow("LineAssist", frameLineAssist);
 			}
 			waitKey(1);
 
-
-
-			//disparity->calculate();
-			
 			if (waitKey(30) >= 0) break;
 		}
 	}

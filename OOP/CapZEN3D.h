@@ -13,13 +13,13 @@ public:
 	VideoCapture capture[2];
 	
 
-	// parameters are videoFile(path) or usb input(number)
+	// parameters are videoFile(path to file) 
 	CapZEN3D(string pPath1, string pPath2)
 	{
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
 	}
-
+	// parameters are usb input(number)
 	CapZEN3D(int pPath1, int pPath2)
 	{
 		capture[0].open(pPath1);
@@ -31,10 +31,7 @@ public:
 
 	virtual void process()
 	{
-
 		omp_set_num_threads(2);
-		string    Camera_Name[2] = { "VidA", "VidB" };
-		
 #pragma omp parallel
 			{
 				int TID = omp_get_thread_num();
@@ -48,17 +45,14 @@ public:
 				frame[TID].copyTo(display[TID]);
 #pragma omp barrier
 			}
-		
 	}
 
 	virtual Mat getLeftRGB()
 	{
-		
 		return frame[0];
 	}
 	virtual Mat getRightRGB()
 	{
-		
 		return frame[1];
 	}
 

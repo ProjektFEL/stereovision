@@ -16,12 +16,16 @@ using namespace std;
 //lines L
 //sign S
 
-template <typename L, typename S>
+#ifndef IProcess_H
+#define IProcess_H
 class IProcess {
 public:
+	
+	IProcess(){};
 	virtual ~IProcess(){};
-	virtual void process(Mat rgb, Mat depthMap) = 0;
+	virtual void process(Mat frameLeft, Mat frameRight) = 0;
 	virtual Mat getObject() = 0;
-	virtual <L> getLine() = 0;
-	virtual <S>[] getSign() = 0;
+	virtual Mat getFrame()=0;
+	
 };
+#endif
