@@ -38,22 +38,22 @@ public:
 
 		__if_exists(CapZEN3D)
 		{
-			property_tree::ini_parser::read_ini("config.ini", pt);
+			property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 			string strPath1 = pt.get<string>("VideoInput.VideoInput1");
 			string strPath2 = pt.get<string>("VideoInput.VideoInput2");
 			int iPath1,iPath2;
 			try
 			{
-				int iPath1 = boost::lexical_cast<int>(strPath1);
+				int iPath1 = boost::lexical_cast<int>(strPath1);   // ak je v subore cislo
 				int iPath2 = boost::lexical_cast<int>(strPath2);
 
 				capture = new CapZEN3D(iPath1, iPath2);
 			}
 			catch (...)
 			{
-				capture = new CapZEN3D(strPath1, strPath2);
+				capture = new CapZEN3D(strPath1, strPath2);  // ak je v subore cesta na video file
 			}
-			   // tu pridat do parametrov konstruktora, nastavenia z suboru .ini, aby sa nacitaval spravny vstup
+			   
 		}
 		//tu inicializujes dalsie objekty napr. procCascades ...
 	}
