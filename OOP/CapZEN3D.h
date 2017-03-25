@@ -15,6 +15,7 @@ public:
 	VideoCapture capture[2];
 	Size size;
 	
+	//haluz
 
 	// parameters are videoFile(path to file) 
 	CapZEN3D(string pPath1, string pPath2)
