@@ -4,18 +4,45 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 #include "opencv2/opencv.hpp"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/lexical_cast.hpp>
 
-
+using namespace boost;
 
 class ProcessA : public IProcess {
-private: int ptX1 = 80, ptX2 = 80, ptY1 = 145, ptY2 = 145, gray = 15;
-		 int theta1 = 56, rho1 = 0, theta2 = 19, rho2 = 0, max_lenght1 = 24, max_lenght2 = 27, edmin = 2, edmax = 255;
+private:
+	property_tree::ptree pt;  // citac .ini suborov
+	int ptX1, ptX2, ptY1, ptY2, gray, theta1, rho1, theta2, rho2, max_lenght1, max_lenght2, edmin, edmax;
+	Mat birdViewCapture;
 
-
-		 Mat birdViewCapture;
+	//int ptX1 = 80, ptX2 = 80, ptY1 = 145, ptY2 = 145, gray = 15;
+	//	 int theta1 = 56, rho1 = 0, theta2 = 19, rho2 = 0, max_lenght1 = 24, max_lenght2 = 27, edmin = 2, edmax = 255;	
 public:
 	 
+	// konstruktor, nacitavanie atributov zo suboru
 	ProcessA(){
+		property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
+		try
+		{	//nie som si isty ci potrebujeme mat vsetky atributy nacitane
+			ptX1 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.ptX1"));
+			ptX2 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.ptX2"));
+			ptY1 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.ptY1"));
+			ptY2 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.ptY2"));
+			gray = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.gray"));
+			theta1 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.theta1"));
+			theta2 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.theta2"));
+			rho1 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.rho1"));
+			rho2 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.rho2"));
+			max_lenght1 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.max_lenght1"));
+			max_lenght2 = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.max_lenght2"));
+			edmin = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.edmin"));
+			edmax = boost::lexical_cast<int>(pt.get<string>("LaneAssistKoef.edmax"));
+		}
+		catch (...)
+		{
+			cout << "Error in parsing LaneAssistKoef in ProcessA!" << endl;
+		}
 	}
 
 	void process(Mat frameLeft, Mat frameRight){
@@ -44,21 +71,20 @@ public:
 
 		 Mat undistorted = Mat(cvSize(320, 240), CV_8UC1);
 		 warpPerspective(frameLeft, frameLeft, getPerspectiveTransform(src, dst), cvSize(320, 240));
-
 		 frameLeft.copyTo(birdViewCapture);
-		 
 	 }
-
-	
 
 	 Mat getFrame(){
 		 return birdViewCapture;
 	 }
 
-	~ProcessA()
-	{}
-	 Mat getObject() {
+	 // este prerobit tuto funkciu, zla navratova hodnota
+		 Mat getObject() {
 		 return birdViewCapture;
 	 }
+
+		 ~ProcessA()
+		 {}
+
 
 };
