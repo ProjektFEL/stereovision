@@ -6,11 +6,14 @@
 #include "opencv2/opencv.hpp"
 
 class CapZEN3D: public ICapture {
+
+
 public:
 	
 	Mat   frame[2],display[2];
 	Mat rgb, depth, object;
 	VideoCapture capture[2];
+	Size size;
 	
 
 	// parameters are videoFile(path to file) 
@@ -18,12 +21,16 @@ public:
 	{
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
+		size = Size(480,320);
 	}
 	// parameters are usb input(number)
 	CapZEN3D(int pPath1, int pPath2)
 	{
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
+		//capture[0].set(CV_CAP_PROP_FPS, 5); // aj tak zrejme nejde
+		//capture[1].set(CV_CAP_PROP_FPS, 5);
+		size = Size(480, 320);
 	}
 
 	~CapZEN3D()
@@ -42,6 +49,7 @@ public:
 				}
 				erode(frame[TID], frame[TID], getStructuringElement(MORPH_RECT, Size(3, 3)));
 				dilate(frame[TID], frame[TID], getStructuringElement(MORPH_RECT, Size(3, 3)));
+				resize(frame[TID], frame[TID], size);
 				frame[TID].copyTo(display[TID]);
 #pragma omp barrier
 			}

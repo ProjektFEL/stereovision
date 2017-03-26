@@ -29,7 +29,7 @@ private:
 	//definicia objektov typu interface
 	IDisparity *disparity;
 	ICapture *capture;
-	IProcess *processBirdview, *processLineDetect;
+	IProcess *processBirdview, *processLaneDetect;
 	property_tree::ptree pt;  // citac .ini suborov
 public:
 	void init()
@@ -42,11 +42,7 @@ public:
 
 		__if_exists(IProcess)
 		{
-			processBirdview = new ProcessA();
-		}
-		__if_exists(IProcess)
-		{
-			processLineDetect = new ProcessB();
+			processLaneDetect = new ProcessB();
 		}
 
 		__if_exists(CapZEN3D)
@@ -57,8 +53,8 @@ public:
 			int iPath1,iPath2;
 			try
 			{
-				int iPath1 = boost::lexical_cast<int>(strPath1);   // ak je v subore cislo
-				int iPath2 = boost::lexical_cast<int>(strPath2);
+				 iPath1 = boost::lexical_cast<int>(strPath1);   // ak je v subore cislo = vstup z kamery
+				 iPath2 = boost::lexical_cast<int>(strPath2);
 
 				capture = new CapZEN3D(iPath1, iPath2);
 			}
@@ -87,27 +83,49 @@ public:
 		cap1->set(CV_CAP_PROP_FPS, 30);
 		*/
 
+		namedWindow("Video input 1", WINDOW_AUTOSIZE);
+		namedWindow("Video input 2", WINDOW_AUTOSIZE);
+		namedWindow("Disparita", WINDOW_AUTOSIZE);
+		namedWindow("LineAssist", WINDOW_AUTOSIZE);
+		moveWindow("Video input 1", 0, 0);
+		moveWindow("Video input 2", 490, 0);
+		moveWindow("Disparita", 0, 350);
+		moveWindow("LineAssist", 490, 350);
+
 		//tu sa budu volat metody a robit hlavny tok
 		while (1)
 		{
 			capture->process();
-			Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLineAssist;
+			Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect;
 			frameLeft = capture->getLeftRGB();
 			frameRight = capture->getRightRGB();
-			processBirdview->process(frameLeft, frameRight);
-			frameBirdView = processBirdview->getFrame();
-			processLineDetect->process(frameBirdView, frameRight);
-			frameLineAssist = processLineDetect->getFrame();
+			/*processBirdview->process(frameLeft, frameRight);
+			frameBirdView = processBirdview->getFrame();*/
 			
-			if (!frameLeft.empty() && !frameRight.empty() && !frameBirdView.empty() && !frameLineAssist.empty()){
+			processLaneDetect->process(frameLeft, frameRight);
+			frameLaneDetect = processLaneDetect->getFrame();
+			
+			if (!frameLeft.empty() && !frameRight.empty())
+			{
+				imshow("Video input 1", frameLeft);
+				imshow("Video input 2", frameRight);
 				disparity->calculate(frameLeft, frameRight);
 				frameDisparity = disparity->getDisparity();
-				imshow("video input 1", frameLeft);
-				imshow("video input 2", frameRight);
-				imshow("disparita", frameDisparity);
-				imshow("BirdView", frameBirdView);
-				imshow("LineAssist", frameLineAssist);
+
+				if (!frameDisparity.empty())
+				{
+					imshow("Disparita", frameDisparity);
+				}
+				else { cout << "Frame disparity is Empty!" << endl; }
+
+				if (!frameLaneDetect.empty())
+				{
+					imshow("LineAssist", frameLaneDetect);
+				}
+				else { cout << "Frame LineDetect is Empty!" << endl; }
 			}
+			else { cout << "Frame Left or Right are Empty!" << endl; }
+
 			waitKey(1);
 
 			if (waitKey(30) >= 0) break;

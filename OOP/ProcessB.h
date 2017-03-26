@@ -14,7 +14,7 @@ class ProcessB : public IProcess {
 private: 
 	property_tree::ptree pt;  // citac .ini suborov
 	int ptX1, ptX2, ptY1, ptY2, gray, theta1, rho1, theta2, rho2, max_lenght1, max_lenght2, edmin, edmax;
-	Mat lineAssistFrame;
+	Mat laneAssistFrame;
 
 		/*int ptX1 = 80, ptX2 = 80, ptY1 = 145, ptY2 = 145, gray = 15;
 		 int theta1 = 56, rho1 = 0, theta2 = 19, rho2 = 0, max_lenght1 = 24, max_lenght2 = 27, edmin = 2, edmax = 255;*/
@@ -42,14 +42,59 @@ public:
 		{
 			cout << "Error in parsing LaneAssistKoef in ProcessB!" << endl;
 		}
+		cvNamedWindow("LaneDetect control", CV_WINDOW_AUTOSIZE);
+		resizeWindow("LaneDetect control", 400, 500);
+		moveWindow("LaneDetect control", 1200, 0);
 	}
 
+	// working with frameLeft and process it to birdView and then lineDetect, frameRight is no-using
 	void process(Mat frameLeft,Mat frameRight){
+		
+		cvCreateTrackbar("gray", "LaneDetect control", &gray, 255);
+		cvCreateTrackbar("ptX1", "LaneDetect control", &ptX1, 320);
+		cvCreateTrackbar("ptY1", "LaneDetect control", &ptY1, 240);
+		cvCreateTrackbar("ptX2", "LaneDetect control", &ptX2, 320);
+		cvCreateTrackbar("ptY2", "LaneDetect control", &ptY2, 240);
+		cvCreateTrackbar("theta1", "LaneDetect control", &theta1, 360);
+		cvCreateTrackbar("rho1", "LaneDetect control", &rho1, 360);
+		cvCreateTrackbar("line lenght1", "LaneDetect control", &max_lenght1, 500);
+		cvCreateTrackbar("theta2", "LaneDetect control", &theta2, 500);
+		cvCreateTrackbar("rho2", "LaneDetect control", &rho2, 500);
+		cvCreateTrackbar("line lenght2", "LaneDetect control", &max_lenght2, 500);
 
-		inRange(frameLeft, 0, gray, frameLeft);
-		GaussianBlur(frameLeft, frameLeft, Size(3, 3), 0, 0, BORDER_DEFAULT);
+		Mat birdViewCapture;
+		cvtColor(frameLeft, frameLeft, COLOR_BGR2GRAY);
+		//cvtColor(frameRight, frameRight, COLOR_BGR2GRAY);
+
+		Point2f src[4], dst[4];
+		src[0].x = (float)ptX1;
+		src[0].y = (float)ptY1;
+		src[1].x = (float)frameLeft.cols - ptX2;
+		src[1].y = (float)ptY2;
+		src[2].x = (float)frameLeft.cols;
+		src[2].y = (float)frameLeft.rows;
+		src[3].x = (float)0;
+		src[3].y = (float)frameLeft.rows;
+
+		dst[0].x = (float)0;
+		dst[0].y = (float)0;
+		dst[1].x = (float)320 - 1;
+		dst[1].y = (float)0;
+		dst[2].x = (float)320 - 1;
+		dst[2].y = (float)240 - 1;
+		dst[3].x = (float)0;
+		dst[3].y = (float)240 - 1;
+
+		Mat undistorted = Mat(cvSize(320, 240), CV_8UC1);
+		warpPerspective(frameLeft, frameLeft, getPerspectiveTransform(src, dst), cvSize(320, 240));
+		frameLeft.copyTo(birdViewCapture);
+		// birdview vyssie
+
+		// lanedetect nizsie
+		inRange(birdViewCapture, 0, gray, birdViewCapture);
+		GaussianBlur(birdViewCapture, birdViewCapture, Size(3, 3), 0, 0, BORDER_DEFAULT);
 		Mat sobelx64f, abs_sobelx64f, sobel8u;
-		Sobel(frameLeft, sobelx64f, frameLeft.depth(), 1, 0, 3);
+		Sobel(birdViewCapture, sobelx64f, birdViewCapture.depth(), 1, 0, 3);
 		convertScaleAbs(sobelx64f, abs_sobelx64f);
 
 		Mat lineSobel;
@@ -101,16 +146,16 @@ public:
 			pt4.y = pt2.y;
 			line(lineSobel, pt3, pt4, Scalar(0, 255, 255), 1, CV_AA);
 		}
-		lineSobel.copyTo(lineAssistFrame);
+		lineSobel.copyTo(laneAssistFrame);
 	 }
 
 	 Mat getFrame(){
-		 return lineAssistFrame;
+		 return laneAssistFrame;
 	 }
 
 	// este prerobit tuto funkciu, zla navratova hodnota
 	 Mat getObject() {
-		 return lineAssistFrame;
+		 return laneAssistFrame;
 	 }
 
 	 ~ProcessB()
