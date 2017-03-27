@@ -5,6 +5,7 @@ class DispSGBM : public IDisparity{
 private:
 	int vmin, vmax, smin, mdip, ndip, sp1, sp2; // premenne pre stereosgbm
 	int dmd, pfc, sur, sws, ssr, sm, bsiz;          //  premenne pre stereosgbm
+	int alpha, beta;
 	Mat disparity, depth;
 	Mat imgLeft, imgRight;
 	VideoCapture cap1;
@@ -13,9 +14,13 @@ private:
 public:
 	DispSGBM()
 	{
-		vmin = 1, vmax = 3, smin = 0, mdip = 43, ndip = 10, sp1 = 266, sp2 = 4782,
-		dmd = 99, pfc = 5, sur = 17, sws = 10, ssr = 10, sm = 10, bsiz = 4;
-		
+		vmin = 16, vmax = 3, smin = 0, mdip = 39, ndip = 10, sp1 = 655, sp2 = 30,
+		dmd = 99, pfc = 0, sur = 17, sws = 10, ssr = 10, sm = 10, bsiz = 3;
+		alpha = 0, beta = 300;
+
+		cvNamedWindow("StereoBM control", CV_WINDOW_AUTOSIZE);
+		resizeWindow("StereoBM control", 400, 500);
+		moveWindow("StereoBM control", 1000, 0);
 	}
 
 	~DispSGBM()
@@ -24,6 +29,21 @@ public:
 
 	virtual void calculate(Mat frameLeft, Mat frameRight)
 	{
+
+		createTrackbar("Vmin", "StereoBM control", &vmin, 99, 0);
+		createTrackbar("Vmax", "StereoBM control", &vmax, 15, 0);
+		createTrackbar("Smin", "StereoBM control", &smin, 30, 0);
+		createTrackbar("mdip", "StereoBM control", &mdip, 99, 0);
+		createTrackbar("dmd", "StereoBM control", &dmd, 99, 0);
+		createTrackbar("bsiz", "StereoBM control", &bsiz, 99, 0);
+		createTrackbar("sp1", "StereoBM control", &sp1, 1000, 0);
+		createTrackbar("sp2", "StereoBM control", &sp2, 5000, 0);
+		createTrackbar("pfc", "StereoBM control", &pfc, 200, 0);
+		createTrackbar("sur", "StereoBM control", &sur, 30, 0);
+		createTrackbar("sws", "StereoBM control", &sws, 200, 0);
+		createTrackbar("ssr", "StereoBM control", &ssr, 30, 0);
+
+
 
 		//Mat frame;
 		//cap0 >> imgLeft;
@@ -43,7 +63,8 @@ public:
 			sgbm->setSpeckleRange(ssr - 10);
 
 			sgbm->compute(frameLeft, frameRight, disparity);
-			disparity.convertTo(disparity, CV_8U, 255);
+			normalize(disparity, disparity, alpha, beta, CV_MINMAX, CV_8U);
+			//disparity.convertTo(disparity, CV_8U, 255);
 			/*imshow("edges", frameLeft);
 			waitKey(1);*/
 	}
