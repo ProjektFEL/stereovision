@@ -133,6 +133,8 @@ public:
 				/*processRemoveGradient->process(frameDisparity, frameLeft);
 				frameRemovedGradient = processRemoveGradient->getFrame();*/
 
+				/*processC->process(frameLeft, frameRight);
+				frameProcessC= processC->getFrame();                      pTo v processC som skusal hladat ciary*/
 
 				if (!frameProcessC.empty())
 				{
