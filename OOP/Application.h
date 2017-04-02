@@ -3,6 +3,7 @@
 #include "DispSGBM.h"
 #include "ProcessA.h"
 #include "ProcessB.h"
+#include "ProcessC.h"
 #include "IControl.h"
 #include "ICapture.h"
 #include "IProcess.h"
@@ -30,9 +31,9 @@ private:
 	//definicia objektov typu interface
 	IDisparity *disparity;
 	ICapture *capture;
-	IProcess *processRemoveGradient, *processLaneDetect;
+	IProcess *processRemoveGradient, *processLaneDetect, *processC;
 	property_tree::ptree pt;  // citac .ini suborov
-	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient;
+	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC;
 
 	Ptr<BackgroundSubtractor> pMOG; //MOG Background subtractor
 	Ptr<BackgroundSubtractor> pMOG2; //MOG2 Background subtractor
@@ -52,6 +53,10 @@ public:
 		__if_exists(IProcess)
 		{
 			processRemoveGradient = new ProcessA();
+		}
+		__if_exists(IProcess)
+		{
+			processC = new ProcessC();
 		}
 
 		__if_exists(CapZEN3D)
@@ -112,6 +117,7 @@ public:
 
 			frameLeft = capture->getLeftRGB();
 			frameRight = capture->getRightRGB();
+
 			/*processBirdview->process(frameLeft, frameRight);
 			frameBirdView = processBirdview->getFrame();*/
 
@@ -119,13 +125,19 @@ public:
 			frameLaneDetect = processLaneDetect->getFrame();
 
 			if (!frameLeft.empty() && !frameRight.empty())
-			{
+			{			
 				imshow("Video input 1", frameLeft);
 				imshow("Video input 2", frameRight);
 				disparity->calculate(frameLeft, frameRight);
 				frameDisparity = disparity->getDisparity();
 				/*processRemoveGradient->process(frameDisparity, frameLeft);
 				frameRemovedGradient = processRemoveGradient->getFrame();*/
+
+
+				if (!frameProcessC.empty())
+				{
+					imshow("ProcessC", frameProcessC);
+				}
 
 				if (!frameDisparity.empty())
 				{

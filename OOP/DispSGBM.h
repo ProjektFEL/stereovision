@@ -48,7 +48,8 @@ public:
 		createTrackbar("alpha", "StereoBM control", &alpha, 300, 0);
 		createTrackbar("beta", "StereoBM control", &beta, 300, 0);
 
-
+		/*bilateralFilter(frameLeft, frameLeft, 9, 75, 75);
+		bilateralFilter(frameRight, frameRight, 9, 75, 75);*/
 
 		//Mat frame;
 		//cap0 >> imgLeft;
@@ -65,7 +66,13 @@ public:
 
 
 			sgbm->compute(frameLeft, frameRight, disparity16U);
-			normalize(disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8U);
+			double min;
+			double max;
+			cv::minMaxIdx(disparity16U, &min, &max);
+			cv::Mat adjMap;
+			cv::convertScaleAbs(disparity16U, disparity, 255 / max);
+			
+			normalize(disparity16U, disparity, alpha, beta, CV_MINMAX,CV_8UC3);
 			erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 			dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 			//disparity.convertTo(disparity, CV_8U, 255);
