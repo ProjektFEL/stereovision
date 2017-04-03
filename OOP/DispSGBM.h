@@ -4,6 +4,7 @@
 #include <opencv2/calib3d.hpp>
 #include "opencv2/opencv.hpp"
 #include <thread> 
+#include <chrono>
 
 class DispSGBM : public IDisparity{
 private:
@@ -66,16 +67,27 @@ public:
 		//cap0 >> imgLeft;
 		//cap1.read(imgRight);
 
+		//auto start = chrono::high_resolution_clock::now();
 			if (vmax == 0) vmax = 1;
+
 			first = new thread(&DispSGBM::calculateSGBM, this, frameLeft, frameRight);
-			first->join();
+			//first->join();
 			second = new thread(&DispSGBM::normalizeThread, this);
-			second->join();
-			third = new thread(&DispSGBM::erodeThread, this);
-			third->join();
-			fourth = new thread(&DispSGBM::dilateThread, DispSGBM());
-			fourth->join();
-			//t1(normalize,disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3,1);
+			//second->join();
+			first = new thread(&DispSGBM::erodeThread, this);
+			//third->join();
+			second = new thread(&DispSGBM::dilateThread, DispSGBM());
+			//fourth->join();
+			/*
+			calculateSGBM(frameLeft, frameRight);
+			normalizeThread();
+			erodeThread();
+			dilateThread();
+			*/
+
+			//auto end = chrono::high_resolution_clock::now();
+			//auto dur = chrono::duration_cast<std::chrono::duration<float>>(end - start);
+			//std::cout << "Disparita:" << dur.count() << " ms" << endl;
 			//normalize(disparity16U, disparity, alpha, beta, CV_MINMAX,CV_8UC3);
 			//erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 			//dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
@@ -87,7 +99,7 @@ public:
 	
 	void normalizeThread(){
 		normalize(disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3);
-		cout << "vlakno1" << endl;
+		//cout << "vlakno1" << endl;
 	}
 	/*
 	std::thread spawn() {
@@ -117,12 +129,12 @@ public:
 
 	void erodeThread(){
 		erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		cout << "vlakno2" << endl;
+		//cout << "vlakno2" << endl;
 	}
 
 	void dilateThread(){
 		dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		cout << "vlakno3" << endl;
+		//cout << "vlakno3" << endl;
 	}
 
 	Mat getLeft()

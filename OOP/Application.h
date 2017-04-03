@@ -7,7 +7,7 @@
 #include "IControl.h"
 #include "ICapture.h"
 #include "IProcess.h"
-#include "CapZEN3D.h"
+#include "CapZED3D.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -21,10 +21,18 @@
 #include <opencv2/calib3d.hpp>
 #include "opencv2/video/background_segm.hpp"
 
+#define sgbm
+#define capzed3d
+#define proca
+#define procb
+#define procc
 
 using namespace cv;
 using namespace std;
 using namespace boost;
+
+
+
 
 class Application{
 private:
@@ -41,26 +49,23 @@ public:
 	void init()
 	{
 		//vytvorenie a inicializacia objektov (smernikov)
-		__if_exists(IDisparity)
-		{
+		#ifdef sgbm
 			disparity = new DispSGBM();
-		}
+		#endif
 
-		__if_exists(IProcess)
-		{
-			processLaneDetect = new ProcessB();
-		}
-		__if_exists(IProcess)
-		{
+		#ifdef proca
 			processRemoveGradient = new ProcessA();
-		}
-		__if_exists(IProcess)
-		{
-			processC = new ProcessC();
-		}
+		#endif
 
-		__if_exists(CapZEN3D)
-		{
+		#ifdef procb
+			processLaneDetect = new ProcessB();
+		#endif
+
+		#ifdef procc
+			processC = new ProcessC();
+		#endif
+
+		#ifdef capzed3d
 			property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 			string strPath1 = pt.get<string>("VideoInput.VideoInput1");
 			string strPath2 = pt.get<string>("VideoInput.VideoInput2");
@@ -70,14 +75,13 @@ public:
 				 iPath1 = boost::lexical_cast<int>(strPath1);   // ak je v subore cislo = vstup z kamery
 				 iPath2 = boost::lexical_cast<int>(strPath2);
 
-				capture = new CapZEN3D(iPath1, iPath2);
+				capture = new CapZED3D(iPath1, iPath2);
 			}
 			catch (...)
 			{
-				capture = new CapZEN3D(strPath1, strPath2);  // ak je v subore cesta na video file
-			}
-			   
-		}
+				capture = new CapZED3D(strPath1, strPath2);  // ak je v subore cesta na video file
+			}   
+		#endif
 
 
 		pMOG = createBackgroundSubtractorKNN(); //MOG approach
@@ -194,13 +198,38 @@ public:
 
 	void term()
 	{
-		__if_exists(CapZEN3D)
+		if (processRemoveGradient)
 		{
+			delete processRemoveGradient;
+			processRemoveGradient = NULL;
+			processRemoveGradient->~IProcess();
+		}
+
+		if (processLaneDetect)
+		{
+			delete processLaneDetect;
+			processLaneDetect = NULL;
+			processLaneDetect->~IProcess();
+		}
+
+		if (processC)
+		{
+			delete processC;
+			processC = NULL;
+			processC->~IProcess();
+		}
+
+		if (capture)
+		{
+			delete capture;
+			capture = NULL;
 			capture->~ICapture();
 		}
 
-		__if_exists(DispSGBM)
+		if (disparity)
 		{
+			delete disparity;
+			disparity = NULL;
 			disparity->~IDisparity();
 		}
 	}

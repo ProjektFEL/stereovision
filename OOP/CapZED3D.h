@@ -8,7 +8,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/lexical_cast.hpp>
 using namespace boost;
-class CapZEN3D: public ICapture {
+class CapZED3D: public ICapture {
 	
 
 public:
@@ -22,7 +22,7 @@ public:
 	//haluz
 
 	// parameters are videoFile(path to file) 
-	CapZEN3D(string pPath1, string pPath2)
+	CapZED3D(string pPath1, string pPath2)
 	{
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
@@ -50,7 +50,7 @@ public:
 		
 	}
 	// parameters are usb input(number)
-	CapZEN3D(int pPath1, int pPath2)
+	CapZED3D(int pPath1, int pPath2)
 	{
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
@@ -63,7 +63,7 @@ public:
 		moveWindow("InputFilter control", 800, 0);
 	}
 
-	~CapZEN3D()
+	~CapZED3D()
 	{}
 
 	virtual void process()
