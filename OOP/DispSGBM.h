@@ -3,9 +3,13 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 #include "opencv2/opencv.hpp"
+#include <thread> 
 
 class DispSGBM : public IDisparity{
 private:
+	//std::thread *first;
+	thread *first, *second, *third, *fourth;
+
 	int vmin, vmax, smin, mdip, ndip, sp1, sp2, pfc, sm, bsiz; // premenne pre stereosgbm
 	//int dmd, sur, sws, ssr;          //  premenne pre stereosgbm
 	int alpha, beta;
@@ -17,6 +21,7 @@ private:
 public:
 	DispSGBM()
 	{
+		//first = new thread();
 		vmin = 16, vmax = 3, smin = 0, mdip = 39, ndip = 10, sp1 = 655, sp2 = 30, pfc = 0, sm = 10, bsiz = 3;
 //		dmd = 99, sur = 17, sws = 10, ssr = 10;
 		alpha = 0, beta = 300;
@@ -27,12 +32,18 @@ public:
 	}
 
 	~DispSGBM()
-	{}
+	{
+		/*
+		first->~thread();
+		second->~thread();
+		third->~thread();
+		fourth->~thread();
+		*/
+	}
 
 
 	virtual void calculate(Mat frameLeft, Mat frameRight)
 	{
-
 		createTrackbar("Vmin", "StereoBM control", &vmin, 99, 0);
 		createTrackbar("Vmax", "StereoBM control", &vmax, 15, 0);
 		createTrackbar("Smin", "StereoBM control", &smin, 30, 0);
@@ -56,28 +67,62 @@ public:
 		//cap1.read(imgRight);
 
 			if (vmax == 0) vmax = 1;
-			Ptr<StereoSGBM> sgbm = StereoSGBM::create(vmin + 1, 16 * vmax, 2 * smin + 1);
-			sgbm->setMinDisparity(mdip - 50);
-			sgbm->setBlockSize(bsiz + 1);
-			sgbm->setP1(sp1 - 10);
-			sgbm->setP2(sp2 - 10);
-			sgbm->setPreFilterCap(pfc - 10);
-			sgbm->setMode(StereoSGBM::MODE_HH);
+			first = new thread(&DispSGBM::calculateSGBM, this, frameLeft, frameRight);
+			first->join();
+			second = new thread(&DispSGBM::normalizeThread, this);
+			second->join();
+			third = new thread(&DispSGBM::erodeThread, this);
+			third->join();
+			fourth = new thread(&DispSGBM::dilateThread, DispSGBM());
+			fourth->join();
+			//t1(normalize,disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3,1);
+			//normalize(disparity16U, disparity, alpha, beta, CV_MINMAX,CV_8UC3);
+			//erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
+			//dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 
-
-			sgbm->compute(frameLeft, frameRight, disparity16U);
-			double min;
-			double max;
-			cv::minMaxIdx(disparity16U, &min, &max);
-			cv::Mat adjMap;
-			cv::convertScaleAbs(disparity16U, disparity, 255 / max);
-			
-			normalize(disparity16U, disparity, alpha, beta, CV_MINMAX,CV_8UC3);
-			erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-			dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 			//disparity.convertTo(disparity, CV_8U, 255);
 			/*imshow("edges", frameLeft);
 			waitKey(1);*/
+	}
+	
+	void normalizeThread(){
+		normalize(disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3);
+		cout << "vlakno1" << endl;
+	}
+	/*
+	std::thread spawn() {
+		return{ normalizeThread };
+	}
+	*/
+
+	void calculateSGBM(Mat frameLeft, Mat frameRight)
+	{
+		Ptr<StereoSGBM> sgbm = StereoSGBM::create(vmin + 1, 16 * vmax, 2 * smin + 1);
+		sgbm->setMinDisparity(mdip - 50);
+		sgbm->setBlockSize(bsiz + 1);
+		sgbm->setP1(sp1 - 10);
+		sgbm->setP2(sp2 - 10);
+		sgbm->setPreFilterCap(pfc - 10);
+		sgbm->setMode(StereoSGBM::MODE_HH);
+
+
+		sgbm->compute(frameLeft, frameRight, disparity16U);
+		double min;
+		double max;
+		cv::minMaxIdx(disparity16U, &min, &max);
+		cv::Mat adjMap;
+		cv::convertScaleAbs(disparity16U, disparity, 255 / max);
+	}
+
+
+	void erodeThread(){
+		erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		cout << "vlakno2" << endl;
+	}
+
+	void dilateThread(){
+		dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		cout << "vlakno3" << endl;
 	}
 
 	Mat getLeft()
