@@ -44,7 +44,7 @@ public:
 		}
 		cvNamedWindow("LaneDetect control", CV_WINDOW_AUTOSIZE);
 		resizeWindow("LaneDetect control", 400, 500);
-		moveWindow("LaneDetect control", 1200, 0);
+		moveWindow("LaneDetect control", 10, 0);
 	}
 
 	// working with frameLeft and process it to birdView and then lineDetect, frameRight is no-using

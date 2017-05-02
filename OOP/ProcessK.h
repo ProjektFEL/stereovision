@@ -26,7 +26,7 @@ public:
 		maxSize2 = 96;
 		cvNamedWindow("Lane_Cascade_control", CV_WINDOW_AUTOSIZE);
 		resizeWindow("Lane_Cascade_control", 400, 500);
-		moveWindow("Lane_Cascade_control", 1300, 0);
+		moveWindow("Lane_Cascade_control", 10, 0);
 	}
 
 	void process(Mat frameLeft,Mat frameRight){
