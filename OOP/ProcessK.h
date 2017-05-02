@@ -12,6 +12,8 @@ using namespace boost;
 
 class ProcessK : public IProcess {
 private: 
+	thread *t;
+	Mat copyLeft, copyRight;
 	Mat frame1;
 	String cascade_name = "classlbp//cascade.xml";
 	CascadeClassifier laneCascade;
@@ -19,7 +21,6 @@ private:
 public:
 	// konstruktor, nacitavanie atributov zo suboru
 	ProcessK(){
-		
 		minSize1 = 24;
 		minSize2 = 24;
 		maxSize1 = 96;
@@ -27,6 +28,22 @@ public:
 		cvNamedWindow("Lane_Cascade_control", CV_WINDOW_AUTOSIZE);
 		resizeWindow("Lane_Cascade_control", 400, 500);
 		moveWindow("Lane_Cascade_control", 10, 0);
+	}
+
+	thread* run(mutex *z, Mat frameLeft, Mat frameRight){
+		z->lock();
+		frameLeft.copyTo(copyLeft);
+		frameRight.copyTo(copyRight);
+		z->unlock();
+		t = new thread(&ProcessK::process, this, copyLeft, copyRight);
+		return t;
+	}
+
+	void work(Mat frameLeft, Mat frameRight){
+		for (int i = 1; i <= 100; i++)
+		{
+			cout << "ProcessK: " << i << endl;
+		}
 	}
 
 	void process(Mat frameLeft,Mat frameRight){

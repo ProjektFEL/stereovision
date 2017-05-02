@@ -12,6 +12,8 @@ using namespace boost;
 
 class ProcessC : public IProcess {
 private: 
+	thread *t;
+	Mat copyLeft, copyRight;
 	Mat imageROI,frame1,original, frameEroded,temp,img;
 	int cny_threshold, cny_apertureSize, trsh_maxValue, trsh_blockSize, trsh_constant, trsh_constant_Compt;
 	double hough_rho, hough_theta, hough_tresh, hough_minLength, hough_maxLine;
@@ -38,6 +40,21 @@ public:
 		moveWindow("LaneDetect control C", 1300, 0);
 	}
 
+	thread* run(mutex* z, Mat frameLeft, Mat frameRight){
+		z->lock();
+		frameLeft.copyTo(copyLeft);
+		frameRight.copyTo(copyRight);
+		z->unlock();
+		t = new thread(&ProcessC::process, this, copyLeft, copyRight);
+		return t;
+	}
+
+	void work(Mat frameLeft, Mat frameRight){
+		for (int i = 1; i <= 100; i++)
+		{
+			cout << "ProcessC: " << i << endl;
+		}
+	}
 	
 	void process(Mat frameLeft,Mat frameRight){
 		int divideFrame = 6;
@@ -98,8 +115,8 @@ public:
 			p1 = Point(l[0], l[1]);
 			p2 = Point(l[2], l[3]);
 			//calculate angle in radian,  if you need it in degrees just do angle * 180 / PI
-			float angle = atan2(p1.y - p2.y, p1.x - p2.x);
-			angle = angle * 180 / CV_PI;
+			float angle = (float) atan2(p1.y - p2.y, p1.x - p2.x);
+			angle = (float) (angle * 180 / CV_PI);
 			
 			if (l[0]<h*2 / 3 && l[2]<h*2 / 3){
 				

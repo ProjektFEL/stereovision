@@ -3,26 +3,21 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 #include "opencv2/opencv.hpp"
-#include <thread> 
-#include <chrono>
 
 class DispSGBM : public IDisparity{
 private:
-	//std::thread *first;
-	thread *first, *second, *third, *fourth;
-
+	thread *t;
+	Mat copyLeft, copyRight;
 	int vmin, vmax, smin, mdip, ndip, sp1, sp2, pfc, sm, bsiz; // premenne pre stereosgbm
 	//int dmd, sur, sws, ssr;          //  premenne pre stereosgbm
 	int alpha, beta;
 	Mat disparity16U,disparity, depth;
 	Mat imgLeft, imgRight;
-	VideoCapture cap1;
 	//string filename = "0";
 	
 public:
 	DispSGBM()
 	{
-		//first = new thread();
 		vmin = 16, vmax = 3, smin = 0, mdip = 39, ndip = 10, sp1 = 655, sp2 = 30, pfc = 0, sm = 10, bsiz = 3;
 //		dmd = 99, sur = 17, sws = 10, ssr = 10;
 		alpha = 0, beta = 300;
@@ -33,17 +28,27 @@ public:
 	}
 
 	~DispSGBM()
-	{
-		/*
-		first->~thread();
-		second->~thread();
-		third->~thread();
-		fourth->~thread();
-		*/
+	{}
+
+
+	thread* run(mutex* z, Mat frameLeft, Mat frameRight){
+		z->lock();
+		frameLeft.copyTo(copyLeft);
+		frameRight.copyTo(copyRight);
+		z->unlock();
+		t = new thread(&DispSGBM::calculate, this, copyLeft, copyRight);
+		return t;
 	}
 
+	void work(Mat frameLeft, Mat frameRight)
+	{
+		for (int i = 1; i <= 100; i++)
+		{
+			cout << "DispSGBM: " << i << endl;
+		}
+	}
 
-	virtual void calculate(Mat frameLeft, Mat frameRight)
+	void calculate(Mat frameLeft, Mat frameRight)
 	{
 		createTrackbar("Vmin", "StereoBM control", &vmin, 99, 0);
 		createTrackbar("Vmax", "StereoBM control", &vmax, 15, 0);
@@ -63,49 +68,13 @@ public:
 		/*bilateralFilter(frameLeft, frameLeft, 9, 75, 75);
 		bilateralFilter(frameRight, frameRight, 9, 75, 75);*/
 
-		//Mat frame;
-		//cap0 >> imgLeft;
-		//cap1.read(imgRight);
+		if (vmax == 0) vmax = 1;
 
-		//auto start = chrono::high_resolution_clock::now();
-			if (vmax == 0) vmax = 1;
-
-			first = new thread(&DispSGBM::calculateSGBM, this, frameLeft, frameRight);
-			//first->join();
-			second = new thread(&DispSGBM::normalizeThread, this);
-			//second->join();
-			first = new thread(&DispSGBM::erodeThread, this);
-			//third->join();
-			second = new thread(&DispSGBM::dilateThread, DispSGBM());
-			//fourth->join();
-			/*
-			calculateSGBM(frameLeft, frameRight);
-			normalizeThread();
-			erodeThread();
-			dilateThread();
-			*/
-
-			//auto end = chrono::high_resolution_clock::now();
-			//auto dur = chrono::duration_cast<std::chrono::duration<float>>(end - start);
-			//std::cout << "Disparita:" << dur.count() << " ms" << endl;
-			//normalize(disparity16U, disparity, alpha, beta, CV_MINMAX,CV_8UC3);
-			//erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-			//dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-
-			//disparity.convertTo(disparity, CV_8U, 255);
-			/*imshow("edges", frameLeft);
-			waitKey(1);*/
-	}
-	
-	void normalizeThread(){
+		calculateSGBM(frameLeft, frameRight);
 		normalize(disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3);
-		//cout << "vlakno1" << endl;
+		erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
 	}
-	/*
-	std::thread spawn() {
-		return{ normalizeThread };
-	}
-	*/
 
 	void calculateSGBM(Mat frameLeft, Mat frameRight)
 	{
@@ -126,27 +95,16 @@ public:
 		cv::convertScaleAbs(disparity16U, disparity, 255 / max);
 	}
 
-
-	void erodeThread(){
-		erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		//cout << "vlakno2" << endl;
-	}
-
-	void dilateThread(){
-		dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		//cout << "vlakno3" << endl;
-	}
-
 	Mat getLeft()
 	{
 		return imgLeft;
 	}
-	
+
 	Mat getRight()
 	{
 		return imgRight;
 	}
-	
+
 	virtual Mat getDisparity()
 	{
 		return disparity;

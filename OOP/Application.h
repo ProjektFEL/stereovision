@@ -5,6 +5,8 @@
 #include "ProcessB.h"
 #include "ProcessC.h"
 #include "ProcessK.h"
+#include "IDetection.h"
+#include "DetectionA.h"
 #include "IControl.h"
 #include "ICapture.h"
 #include "IProcess.h"
@@ -17,6 +19,10 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <ctime>
 
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
@@ -26,27 +32,32 @@
 #define capzed3d
 #define proca
 #define procb
-#define procc
-#define prock
+//#define procc
+//#define prock
+//#define deta
 
 using namespace cv;
 using namespace std;
 using namespace boost;
-
+using namespace std::chrono;
 
 
 
 class Application{
 private:
+	//vlakna
+	thread *t1, *t2, *t3;
+	std::mutex lockThred;
 	//definicia objektov typu interface
 	IDisparity *disparity;
 	ICapture *capture;
+	IDetection *detectionA;
 	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK;
 	property_tree::ptree pt;  // citac .ini suborov
-	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade;
-
-	Ptr<BackgroundSubtractor> pMOG; //MOG Background subtractor
-	Ptr<BackgroundSubtractor> pMOG2; //MOG2 Background subtractor
+	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade 
+		, frameCloseObj, frameMediumObj, frameFarObj;
+	bool durotationThreads;
+	system_clock::time_point then, now;
 public:
 	void init()
 	{
@@ -67,8 +78,8 @@ public:
 			processC = new ProcessC();
 		#endif
 
-		#ifdef procc
-			processK = new ProcessK();
+		#ifdef prock
+			processK = new ProcessK(t2);
 		#endif
 
 		#ifdef capzed3d
@@ -88,28 +99,18 @@ public:
 				capture = new CapZED3D(strPath1, strPath2);  // ak je v subore cesta na video file
 			}   
 		#endif
+	   
+		#ifdef deta
+			detectionA = new DetectionA();
+		#endif
 
-
-		pMOG = createBackgroundSubtractorKNN(); //MOG approach
-		pMOG2 = createBackgroundSubtractorMOG2();
+			durotationThreads = false;
 		//tu inicializujes dalsie objekty napr. procCascades ...
 	}
 
 	void cycle()
-	{
-		
+	{	
 		//int wheel; //bool direction; int strength, bool brake;
-		
-		//rgb = capture->getRGB();
-		//depth = capture->getDepthMap();
-		/*
-		cap0->set(CV_CAP_PROP_FRAME_HEIGHT, 320);
-		cap0->set(CV_CAP_PROP_FRAME_WIDTH, 240);
-		cap0->set(CV_CAP_PROP_FPS, 30);
-		cap1->set(CV_CAP_PROP_FRAME_HEIGHT, 320);
-		cap1->set(CV_CAP_PROP_FRAME_WIDTH, 240);
-		cap1->set(CV_CAP_PROP_FPS, 30);
-		*/
 
 		namedWindow("Video input 1", WINDOW_AUTOSIZE);
 		namedWindow("Video input 2", WINDOW_AUTOSIZE);
@@ -121,32 +122,92 @@ public:
 		moveWindow("LineAssist", 490, 350);
 
 		//tu sa budu volat metody a robit hlavny tok
-		while (1)
+		while (1)//0 ak nechceme aby sa to robilo
 		{
 			capture->process();
+			lockThred.lock();
 			frameLeft = capture->getLeftRGB();
 			frameRight = capture->getRightRGB();
+			lockThred.unlock();
 
 			if (!frameLeft.empty() && !frameRight.empty())
 			{			
 				imshow("Video input 1", frameLeft);
 				imshow("Video input 2", frameRight);
 
-				/*processBirdview->process(frameLeft, frameRight);
-				frameBirdView = processBirdview->getFrame();*/
+#ifdef sgbm			
+				if (durotationThreads)
+					then = system_clock::now();
 
-				processLaneDetect->process(frameLeft, frameRight);
-				frameLaneDetect = processLaneDetect->getFrame();
-
-				disparity->calculate(frameLeft, frameRight);
+				t1 = disparity->run(&lockThred, frameLeft, frameRight);
+				lockThred.lock();
 				frameDisparity = disparity->getDisparity();
+				lockThred.unlock();
 
-				/*processRemoveGradient->process(frameDisparity, frameLeft);
-				frameRemovedGradient = processRemoveGradient->getFrame();*/
+				if (durotationThreads)
+				{ 
+					now = system_clock::now();
+					cout << "Execution Time DISPARITY:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+				}
+				
+#endif
 
-				processK->process(frameLeft, frameRight);
-				frameCascade = processK->getFrame();
+#ifdef procb
+				if (durotationThreads)
+					then = system_clock::now();
 
+				t2 = processLaneDetect->run(&lockThred, frameLeft, frameRight);
+				lockThred.lock();
+				frameLaneDetect = processLaneDetect->getFrame();
+				lockThred.unlock();
+
+				if (durotationThreads)
+				{
+					now = system_clock::now();
+					cout << "Execution Time LANE DETECT:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+				}
+#endif
+				
+				processRemoveGradient->process(frameDisparity, frameLeft);
+				lockThred.lock();
+				frameRemovedGradient = processRemoveGradient->getFrame();
+				lockThred.unlock();
+
+
+#ifdef prock
+				if (durotationThreads)
+					then = system_clock::now();
+
+				//processK->work(&lockThred, frameLeft, frameRight);
+				//lockThred.lock();
+				//frameCascade = processK->getFrame();
+				//lockThred.unlock();
+
+				if (durotationThreads)
+				{
+					now = system_clock::now();
+					cout << "Execution Time CASCADES:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+				}
+#endif
+
+#ifdef deta
+				if (durotationThreads)
+					then = system_clock::now();
+
+				t3 = detectionA->run(&lockThred, frameDisparity, frameLeft, frameRight);
+				lockThred.lock();
+				frameCloseObj = detectionA->getCloseObj();
+				frameMediumObj = detectionA->getMediumObj();
+				frameFarObj = detectionA->getFarObj();
+				lockThred.unlock();
+
+				if (durotationThreads)
+				{
+					now = system_clock::now();
+					cout << "Execution Time DETECTION:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+				}
+#endif
+				
 				if (!frameDisparity.empty())
 				{
 					imshow("Disparita", frameDisparity);
@@ -165,16 +226,31 @@ public:
 				}
 				else { cout << "Frame LineDetect is Empty!" << endl; }
 				
+				if (!frameCloseObj.empty())
+				{
+					imshow("CloseDistanceObj", frameCloseObj);
+				}
+
+				if (!frameMediumObj.empty())
+				{
+					imshow("MediumDistanceObj", frameMediumObj);
+				}
+
+				if (!frameMediumObj.empty())
+				{
+					imshow("FarDistanceObj", frameFarObj);
+				}
+
 				if (!frameCascade.empty())
 				{
 					imshow("Lane_Cascade", frameCascade);
 				}
 				else { cout << "Frame Lane_Cascade is Empty!" << endl; }
+				
 			}
 			else { cout << "Frame Left or Right are Empty!" << endl; }
-
+			
 			waitKey(1);
-
 			
 			char key = (char)waitKey(30);
 			switch (key)
@@ -182,12 +258,10 @@ public:
 			case 'q':
 			case 'Q':
 			case  27: //escape key
-
-				// cvReleaseVideoWriter(CvVideoWriter** writer)
+				term();
 				exit(0);
 				break;
 			}
-		
 		}
 	}
 
@@ -197,35 +271,42 @@ public:
 		{
 			delete processRemoveGradient;
 			processRemoveGradient = NULL;
-			processRemoveGradient->~IProcess();
 		}
 
 		if (processLaneDetect)
 		{
 			delete processLaneDetect;
 			processLaneDetect = NULL;
-			processLaneDetect->~IProcess();
 		}
 
 		if (processC)
 		{
 			delete processC;
 			processC = NULL;
-			processC->~IProcess();
 		}
 
 		if (capture)
 		{
 			delete capture;
 			capture = NULL;
-			capture->~ICapture();
 		}
 
 		if (disparity)
 		{
 			delete disparity;
 			disparity = NULL;
-			disparity->~IDisparity();
+		}
+
+		if (detectionA)
+		{
+			delete detectionA;
+			detectionA = NULL;
+		}	
+
+		if (processK)
+		{
+			delete processK;
+			processK = NULL;
 		}
 	}
 };

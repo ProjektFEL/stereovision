@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <thread> 
+#include <mutex>
 
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
@@ -23,7 +25,9 @@ public:
 	
 	IProcess(){};
 	virtual ~IProcess(){};
+	virtual thread* run(mutex* z, Mat frameLeft, Mat frameRight) = 0;
 	virtual void process(Mat frameLeft, Mat frameRight) = 0;
+	virtual void work(Mat frameLeft, Mat frameRight) = 0;
 	virtual Mat getObject() = 0;
 	virtual Mat getFrame()=0;
 	
