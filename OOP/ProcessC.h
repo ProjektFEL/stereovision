@@ -41,10 +41,10 @@ public:
 	}
 
 	thread* run(mutex* z, Mat frameLeft, Mat frameRight){
-		z->lock();
+		//z->lock();
 		frameLeft.copyTo(copyLeft);
 		frameRight.copyTo(copyRight);
-		z->unlock();
+		//z->unlock();
 		t = new thread(&ProcessC::process, this, copyLeft, copyRight);
 		return t;
 	}

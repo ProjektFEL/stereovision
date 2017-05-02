@@ -86,7 +86,6 @@ public:
 		sgbm->setPreFilterCap(pfc - 10);
 		sgbm->setMode(StereoSGBM::MODE_HH);
 
-
 		sgbm->compute(frameLeft, frameRight, disparity16U);
 		double min;
 		double max;

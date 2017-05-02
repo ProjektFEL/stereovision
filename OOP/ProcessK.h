@@ -31,10 +31,10 @@ public:
 	}
 
 	thread* run(mutex *z, Mat frameLeft, Mat frameRight){
-		z->lock();
+		//z->lock();
 		frameLeft.copyTo(copyLeft);
 		frameRight.copyTo(copyRight);
-		z->unlock();
+		//z->unlock();
 		t = new thread(&ProcessK::process, this, copyLeft, copyRight);
 		return t;
 	}
@@ -53,7 +53,7 @@ public:
 		cvCreateTrackbar("maxSize1", "Lane_Cascade_control", &maxSize1, 150);
 		cvCreateTrackbar("maxSize2", "Lane_Cascade_control", &maxSize2, 150);
 
-		if (!laneCascade.load(cascade_name)){ printf("--(!)Error loading face cascade\n");  };
+		if (!laneCascade.load(cascade_name)){ printf("--(!)Error loading lane cascade\n");  };
 
 		std::vector<Rect> lanes;
 		Mat frame_gray;

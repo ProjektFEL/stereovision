@@ -63,7 +63,7 @@ public:
 		////invert(noGradient,noGradient,DECOMP_NORMAL);
 
 		pMOG->apply(disparity, removedGradient);
-		pMOG2->apply(disparity, removedGradient);
+		//pMOG2->apply(disparity, removedGradient);
 
 
 		

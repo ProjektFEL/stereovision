@@ -33,7 +33,7 @@
 #define proca
 #define procb
 //#define procc
-//#define prock
+#define prock
 //#define deta
 
 using namespace cv;
@@ -79,7 +79,7 @@ public:
 		#endif
 
 		#ifdef prock
-			processK = new ProcessK(t2);
+			processK = new ProcessK();
 		#endif
 
 		#ifdef capzed3d
@@ -125,10 +125,10 @@ public:
 		while (1)//0 ak nechceme aby sa to robilo
 		{
 			capture->process();
-			lockThred.lock();
+			
 			frameLeft = capture->getLeftRGB();
 			frameRight = capture->getRightRGB();
-			lockThred.unlock();
+			
 
 			if (!frameLeft.empty() && !frameRight.empty())
 			{			
@@ -167,21 +167,22 @@ public:
 					cout << "Execution Time LANE DETECT:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
 				}
 #endif
-				
+	
+#ifdef proca
 				processRemoveGradient->process(frameDisparity, frameLeft);
 				lockThred.lock();
 				frameRemovedGradient = processRemoveGradient->getFrame();
 				lockThred.unlock();
-
+#endif
 
 #ifdef prock
 				if (durotationThreads)
 					then = system_clock::now();
 
-				//processK->work(&lockThred, frameLeft, frameRight);
-				//lockThred.lock();
-				//frameCascade = processK->getFrame();
-				//lockThred.unlock();
+				processK->process(frameLeft, frameRight);
+				lockThred.lock();
+				frameCascade = processK->getFrame();
+				lockThred.unlock();
 
 				if (durotationThreads)
 				{
