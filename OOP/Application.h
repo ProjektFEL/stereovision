@@ -5,6 +5,7 @@
 #include "ProcessB.h"
 #include "ProcessC.h"
 #include "ProcessK.h"
+#include "ProcessIPM.h"
 #include "IDetection.h"
 #include "DetectionA.h"
 #include "IControl.h"
@@ -34,6 +35,7 @@
 #define procb
 //#define procc
 #define prock
+#define procIPM
 //#define deta
 
 using namespace cv;
@@ -52,10 +54,10 @@ private:
 	IDisparity *disparity;
 	ICapture *capture;
 	IDetection *detectionA;
-	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK;
+	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK, *processIPM;
 	property_tree::ptree pt;  // citac .ini suborov
 	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade 
-		, frameCloseObj, frameMediumObj, frameFarObj;
+		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM;
 	bool durotationThreads;
 	system_clock::time_point then, now;
 public:
@@ -80,7 +82,12 @@ public:
 
 		#ifdef prock
 			processK = new ProcessK();
+		#endif	
+
+		#ifdef procIPM
+			processIPM = new ProcessIPM();
 		#endif
+
 
 		#ifdef capzed3d
 			property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
@@ -116,6 +123,7 @@ public:
 		namedWindow("Video input 2", WINDOW_AUTOSIZE);
 		namedWindow("Disparita", WINDOW_AUTOSIZE);
 		namedWindow("LineAssist", WINDOW_AUTOSIZE);
+		namedWindow("InversePerspectiveMapping", WINDOW_AUTOSIZE);
 		moveWindow("Video input 1", 0, 0);
 		moveWindow("Video input 2", 490, 0);
 		moveWindow("Disparita", 0, 350);
@@ -175,6 +183,22 @@ public:
 				lockThred.unlock();
 #endif
 
+#ifdef procIPM
+				if (durotationThreads)
+					then = system_clock::now();
+
+				processIPM->process(frameLeft, frameRight);
+				lockThred.lock();
+				frameIPM = processIPM->getFrame();
+				lockThred.unlock();
+
+				if (durotationThreads)
+				{
+					now = system_clock::now();
+					cout << "Execution Time InversePerspectiveMapping:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+				}
+#endif
+
 #ifdef prock
 				if (durotationThreads)
 					then = system_clock::now();
@@ -190,6 +214,8 @@ public:
 					cout << "Execution Time CASCADES:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
 				}
 #endif
+
+
 
 #ifdef deta
 				if (durotationThreads)
@@ -247,6 +273,12 @@ public:
 					imshow("Lane_Cascade", frameCascade);
 				}
 				else { cout << "Frame Lane_Cascade is Empty!" << endl; }
+
+				if (!frameIPM.empty())
+				{
+					imshow("InversePerspectiveMapping", frameIPM);
+				}
+				else { cout << "Frame InversePerspectiveMapping is Empty!" << endl; }
 				
 			}
 			else { cout << "Frame Left or Right are Empty!" << endl; }
