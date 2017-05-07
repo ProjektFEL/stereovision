@@ -6,6 +6,7 @@
 #include "ProcessC.h"
 #include "ProcessK.h"
 #include "ProcessIPM.h"
+#include "ProcessBGS.h"
 #include "IDetection.h"
 #include "DetectionA.h"
 #include "IControl.h"
@@ -32,10 +33,11 @@
 #define sgbm
 #define capzed3d
 #define proca
-#define procb
+//#define procb
 //#define procc
 #define prock
 #define procIPM
+#define procBGS
 //#define deta
 
 using namespace cv;
@@ -54,10 +56,10 @@ private:
 	IDisparity *disparity;
 	ICapture *capture;
 	IDetection *detectionA;
-	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK, *processIPM;
+	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK, *processIPM, *processBGS;
 	property_tree::ptree pt;  // citac .ini suborov
 	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade 
-		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM;
+		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM, frameBGS, MatObjectDetected;
 	bool durotationThreads;
 	system_clock::time_point then, now;
 public:
@@ -88,6 +90,9 @@ public:
 			processIPM = new ProcessIPM();
 		#endif
 
+#ifdef procBGS
+			processBGS = new ProcessBGS();
+#endif
 
 		#ifdef capzed3d
 			property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
@@ -238,21 +243,43 @@ public:
 				if (!frameDisparity.empty())
 				{
 					imshow("Disparita", frameDisparity);
+#ifdef procBGS
+					if (durotationThreads)
+						then = system_clock::now();
+
+					processBGS->process(frameDisparity, frameRight);
+					lockThred.lock();
+					frameBGS = processBGS->getFrame();
+					MatObjectDetected = processBGS->getObject();
+					lockThred.unlock();
+
+					if (durotationThreads)
+					{
+						now = system_clock::now();
+						cout << "Execution Time InversePerspectiveMapping:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+					}
+					imshow("FrameBGS", frameBGS);
+					cout << MatObjectDetected << endl;
+#endif
 				}
 				else { cout << "Frame disparity is Empty!" << endl; }
+#ifdef procc
+				
 
 				if (!frameProcessC.empty())
 				{
 					imshow("ProcessC", frameProcessC);
 				}
 				else { cout << "Frame processC is Empty!" << endl; }
+#endif
 
+#ifdef procb
 				if (!frameLaneDetect.empty())
 				{
 					imshow("LineAssist", frameLaneDetect);
 				}
 				else { cout << "Frame LineDetect is Empty!" << endl; }
-				
+#endif
 				if (!frameCloseObj.empty())
 				{
 					imshow("CloseDistanceObj", frameCloseObj);
@@ -290,6 +317,7 @@ public:
 			{
 			case 'q':
 			case 'Q':
+			case 's': imwrite("disparita.png",frameDisparity);
 			case  27: //escape key
 				term();
 				exit(0);
