@@ -10,7 +10,7 @@
 #include "opencv2/video/background_segm.hpp"
 
 
-using namespace cv;
+
 using namespace std;
 
 #ifndef ICapture_H
@@ -19,8 +19,8 @@ class ICapture {
 public:
 	virtual ~ICapture(){};
 	virtual void process() = 0;
-	virtual Mat getLeftRGB() = 0;
-	virtual Mat getRightRGB() = 0;
-	virtual Mat getDepthMap() = 0;
+	virtual cv::Mat getLeftRGB() = 0;
+	virtual cv::Mat getRightRGB() = 0;
+	virtual cv::Mat getDepthMap() = 0;
 };
 #endif

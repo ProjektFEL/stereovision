@@ -6,7 +6,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/video/background_segm.hpp"
 
-using namespace cv;
+
 using namespace std;
 
 
@@ -16,8 +16,8 @@ private:
 	int a, b, c;
 	int l1, l2, l3;
 	string motion;
-	Mat copyLeft, copyRight, copyDisparity;
-	Mat close, medium, far;
+	cv::Mat copyLeft, copyRight, copyDisparity;
+	cv::Mat close, medium, far;
 public:
 	DetectionA()
 	{
@@ -27,7 +27,7 @@ public:
 	~DetectionA()
 	{}
 
-	thread* run(mutex* z, Mat disparity, Mat frameLeft, Mat frameRight){
+	thread* run(mutex* z, cv::Mat disparity, cv::Mat frameLeft, cv::Mat frameRight){
 		z->lock();
 		frameLeft.copyTo(copyLeft);
 		frameRight.copyTo(copyRight);
@@ -37,7 +37,7 @@ public:
 		return t;
 	}
 
-	void work(Mat disparity, Mat frameLeft, Mat frameRight)
+	void work(cv::Mat disparity, cv::Mat frameLeft, cv::Mat frameRight)
 	{
 		for (int i = 1; i <= 100; i++)
 		{
@@ -45,9 +45,9 @@ public:
 		}
 	};
 
-	int detect_object(Mat disparity, uint x1, uint x2)
+	int detect_object(cv::Mat disparity, uint x1, uint x2)
 	{
-		Scalar valueD;
+		cv::Scalar valueD;
 		uint i, j, y1 = 1, y2 = 239, pb = 0;
 		int prem = 0;
 		valueD = {0};
@@ -60,7 +60,7 @@ public:
 					return 1;
 				else
 				{
-					valueD = disparity.at<uint>(Point(i, j));
+					valueD = disparity.at<uint>(cv::Point(i, j)); //  chyba
 					if ((valueD.val[0] > l1) && (valueD.val[0] < l2))
 					{
 						pb++;
@@ -118,7 +118,7 @@ public:
 	}
 
 
-	void calculate(Mat disparity, Mat frameLeft, Mat frameRight)
+	void calculate(cv::Mat disparity, cv::Mat frameLeft, cv::Mat frameRight)
 	{
 			//pracujeme s kopiami
 			a = detect_object(disparity, 40, 80);
@@ -131,17 +131,17 @@ public:
 	};
 
 
-	Mat getCloseObj()
+	cv::Mat getCloseObj()
 	{
 		return close;
 	};
 
-	Mat getMediumObj()
+	cv::Mat getMediumObj()
 	{
 		return medium;
 	};
 
-	Mat getFarObj()
+	cv::Mat getFarObj()
 	{
 		return far;
 	};

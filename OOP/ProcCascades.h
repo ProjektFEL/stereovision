@@ -2,7 +2,7 @@
 #include "IProcess.h"
 
 
-using namespace cv;
+
 using namespace std;
 
 template <typename L> //lines
@@ -18,9 +18,9 @@ public:
 	~ProcCascades()
 	{}
 
-	virtual void process(Mat rgb, Mat depthMap) 
+	virtual void process(cv::Mat rgb, cv::Mat depthMap)
 	{}
-	virtual Mat getObject()
+	virtual cv::Mat getObject()
 	{}
 	virtual <L> getLine()
 	{}

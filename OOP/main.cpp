@@ -1,6 +1,6 @@
 #include "Application.h"
 
-using namespace cv;
+
 using namespace std;
 
 int main()

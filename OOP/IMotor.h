@@ -10,7 +10,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/video/background_segm.hpp"
 
-using namespace cv;
 using namespace std;
 
 class IMotor {

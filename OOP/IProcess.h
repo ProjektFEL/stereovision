@@ -12,7 +12,7 @@
 #include "opencv2/video/background_segm.hpp"
 
 
-using namespace cv;
+
 using namespace std;
 
 //lines L
@@ -25,11 +25,13 @@ public:
 	
 	IProcess(){};
 	virtual ~IProcess(){};
-	virtual thread* run(mutex* z, Mat frameLeft, Mat frameRight) = 0;
-	virtual void process(Mat frameLeft, Mat frameRight) = 0;
-	virtual void work(Mat frameLeft, Mat frameRight) = 0;
-	virtual Mat getObject() = 0;
-	virtual Mat getFrame()=0;
+	virtual thread* run(mutex* z, cv::Mat frameLeft, cv::Mat frameRight) = 0;
+	virtual void process(cv::Mat frameLeft, cv::Mat frameRight) = 0;
+	virtual void work(cv::Mat frameLeft, cv::Mat frameRight) = 0;
+	
+	virtual cv::Mat getFrame()=0;
 	
 };
+
+class Buffer {};
 #endif

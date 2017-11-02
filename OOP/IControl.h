@@ -8,7 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/video/background_segm.hpp"
 
-using namespace cv;
+
 using namespace std;
 
 #ifndef IControl_H
@@ -17,7 +17,7 @@ template <typename L,typename S>
 class IControl {
 public:
 	virtual ~IControl(){};
-	virtual void process(Mat object, L line, []S signs) = 0;
+	virtual void process(cv::Mat object, L line, []S signs) = 0;
 	virtual int getWheel() = 0;
 	virtual bool getDirection() = 0;
 	virtual int getStrength() = 0;

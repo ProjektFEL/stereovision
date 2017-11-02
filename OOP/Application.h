@@ -30,17 +30,17 @@
 #include <opencv2/calib3d.hpp>
 #include "opencv2/video/background_segm.hpp"
 
-#define sgbm
+//#define sgbm
 #define capzed3d
-#define proca
-//#define procb
-//#define procc
-#define prock
-#define procIPM
-#define procBGS
-//#define deta
+//#define proca // background substractor ktory nerobi nic
+//#define procb // jozkov linedetect
+#define procc // hladanie ciar patoziak
+//#define prock
+#define procIPM // inverzne mapovanie
+//#define procBGS //chyba, asi nespravna velkost gradient.png
+//#define deta //pada do chyby treba opravit
 
-using namespace cv;
+
 using namespace std;
 using namespace boost;
 using namespace std::chrono;
@@ -58,9 +58,10 @@ private:
 	IDetection *detectionA;
 	IProcess *processRemoveGradient, *processLaneDetect, *processC, *processK, *processIPM, *processBGS;
 	property_tree::ptree pt;  // citac .ini suborov
-	Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade 
+	cv::Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade 
 		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM, frameBGS, MatObjectDetected;
 	bool durotationThreads;
+	int isCameraZed;
 	system_clock::time_point then, now;
 public:
 	void init()
@@ -124,15 +125,26 @@ public:
 	{	
 		//int wheel; //bool direction; int strength, bool brake;
 
-		namedWindow("Video input 1", WINDOW_AUTOSIZE);
-		namedWindow("Video input 2", WINDOW_AUTOSIZE);
-		namedWindow("Disparita", WINDOW_AUTOSIZE);
-		namedWindow("LineAssist", WINDOW_AUTOSIZE);
-		namedWindow("InversePerspectiveMapping", WINDOW_AUTOSIZE);
-		moveWindow("Video input 1", 0, 0);
-		moveWindow("Video input 2", 490, 0);
-		moveWindow("Disparita", 0, 350);
-		moveWindow("LineAssist", 490, 350);
+		property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
+		try
+		{   //nie som si isty ci potrebujeme mat vsetky atributy nacitane
+			isCameraZed = boost::lexical_cast<int>(pt.get<string>("VideoInput.CameraZed"));
+			
+		}
+		catch (...)
+		{
+			cout << "Error in parsing Filter in CaptureZen3D!" << endl;
+		}
+
+		namedWindow("Video input 1", cv::WINDOW_AUTOSIZE);
+		namedWindow("Video input 2", cv::WINDOW_AUTOSIZE);
+		//namedWindow("Disparita", cv::WINDOW_AUTOSIZE);
+		//namedWindow("LineAssist", cv::WINDOW_AUTOSIZE);
+		//namedWindow("InversePerspectiveMapping", WINDOW_AUTOSIZE);
+		cv::moveWindow("Video input 1", 0, 0);
+		cv::moveWindow("Video input 2", 490, 0);
+		cv::moveWindow("Disparita", 0, 350);
+		cv::moveWindow("LineAssist", 490, 350);
 
 		//tu sa budu volat metody a robit hlavny tok
 		while (1)//0 ak nechceme aby sa to robilo
@@ -144,23 +156,37 @@ public:
 			
 
 			if (!frameLeft.empty() && !frameRight.empty())
-			{			
-				imshow("Video input 1", frameLeft);
-				imshow("Video input 2", frameRight);
+			{	
+				try {
+					cv::imshow("Video input 1", frameLeft);
+					cv::imshow("Video input 2", frameRight);
+				}
+				catch(cv::Exception & e){
+					cerr << e.msg << endl;
+				}
 
-#ifdef sgbm			
-				if (durotationThreads)
-					then = system_clock::now();
+#ifdef sgbm		
+				if (isCameraZed == 1) {
+					
+					cv::Mat frameDisparity1, frameDisparity2;
+					frameDisparity = capture->getDepthMap();
 
-				t1 = disparity->run(&lockThred, frameLeft, frameRight);
-				lockThred.lock();
-				frameDisparity = disparity->getDisparity();
-				lockThred.unlock();
+				}
+				else {
 
-				if (durotationThreads)
-				{ 
-					now = system_clock::now();
-					cout << "Execution Time DISPARITY:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+					if (durotationThreads)
+						then = system_clock::now();
+
+					t1 = disparity->run(&lockThred, frameLeft, frameRight);
+					lockThred.lock();
+					frameDisparity = disparity->getDisparity();
+					lockThred.unlock();
+
+					if (durotationThreads)
+					{
+						now = system_clock::now();
+						cout << "Execution Time DISPARITY:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+					}
 				}
 				
 #endif
@@ -204,21 +230,7 @@ public:
 				}
 #endif
 
-#ifdef prock
-				if (durotationThreads)
-					then = system_clock::now();
 
-				processK->process(frameLeft, frameRight);
-				lockThred.lock();
-				frameCascade = processK->getFrame();
-				lockThred.unlock();
-
-				if (durotationThreads)
-				{
-					now = system_clock::now();
-					cout << "Execution Time CASCADES:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
-				}
-#endif
 
 
 
@@ -263,15 +275,11 @@ public:
 #endif
 				}
 				else { cout << "Frame disparity is Empty!" << endl; }
-#ifdef procc
+
 				
 
-				if (!frameProcessC.empty())
-				{
-					imshow("ProcessC", frameProcessC);
-				}
-				else { cout << "Frame processC is Empty!" << endl; }
-#endif
+				
+
 
 #ifdef procb
 				if (!frameLaneDetect.empty())
@@ -295,24 +303,69 @@ public:
 					imshow("FarDistanceObj", frameFarObj);
 				}
 
-				if (!frameCascade.empty())
-				{
-					imshow("Lane_Cascade", frameCascade);
-				}
-				else { cout << "Frame Lane_Cascade is Empty!" << endl; }
+				
 
 				if (!frameIPM.empty())
 				{
 					imshow("InversePerspectiveMapping", frameIPM);
+
+#ifdef procc
+					if (durotationThreads)
+						then = system_clock::now();
+
+					processC->process(frameIPM, frameRight);
+					lockThred.lock();
+					frameProcessC = processC->getFrame();
+					lockThred.unlock();
+
+					if (durotationThreads)
+					{
+						now = system_clock::now();
+						cout << "Execution Time InversePerspectiveMapping:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+					}
+
+					if (!frameProcessC.empty())
+					{
+						imshow("ProcessC", frameProcessC);
+					}
+					else { cout << "Frame processC is Empty!" << endl; }
+#endif
+
+#ifdef prock
+					if (durotationThreads)
+						then = system_clock::now();
+
+					processK->process(frameLeft, frameLeft);
+					lockThred.lock();
+					frameCascade = processK->getFrame();
+					lockThred.unlock();
+
+					if (durotationThreads)
+					{
+						now = system_clock::now();
+						cout << "Execution Time CASCADES:" << duration_cast<milliseconds>(now - then).count() << " ms" << endl;
+					}
+					if (!frameCascade.empty())
+					{
+						imshow("Lane_Cascade", frameCascade);
+
+					}
+					else { cout << "Frame Lane_Cascade is Empty!" << endl; }
+#endif
+
+
+
 				}
-				else { cout << "Frame InversePerspectiveMapping is Empty!" << endl; }
+				
+
+
 				
 			}
 			else { cout << "Frame Left or Right are Empty!" << endl; }
 			
-			waitKey(1);
+			cv::waitKey(1);
 			
-			char key = (char)waitKey(30);
+			char key = (char)cv::waitKey(30);
 			switch (key)
 			{
 			case 'q':
@@ -370,4 +423,6 @@ public:
 			processK = NULL;
 		}
 	}
+
+	
 };

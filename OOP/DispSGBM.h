@@ -7,12 +7,12 @@
 class DispSGBM : public IDisparity{
 private:
 	thread *t;
-	Mat copyLeft, copyRight;
+	cv::Mat copyLeft, copyRight;
 	int vmin, vmax, smin, mdip, ndip, sp1, sp2, pfc, sm, bsiz; // premenne pre stereosgbm
 	//int dmd, sur, sws, ssr;          //  premenne pre stereosgbm
 	int alpha, beta;
-	Mat disparity16U,disparity, depth;
-	Mat imgLeft, imgRight;
+	cv::Mat disparity16U,disparity, depth;
+	cv::Mat imgLeft, imgRight;
 	//string filename = "0";
 	
 public:
@@ -23,15 +23,15 @@ public:
 		alpha = 0, beta = 300;
 
 		cvNamedWindow("StereoBM control", CV_WINDOW_AUTOSIZE);
-		resizeWindow("StereoBM control", 400, 500);
-		moveWindow("StereoBM control", 1000, 0);
+		cv::resizeWindow("StereoBM control", 400, 500);
+		cv::moveWindow("StereoBM control", 1000, 0);
 	}
 
 	~DispSGBM()
 	{}
 
 
-	thread* run(mutex* z, Mat frameLeft, Mat frameRight){
+	thread* run(mutex* z, cv::Mat frameLeft, cv::Mat frameRight){
 		z->lock();
 		frameLeft.copyTo(copyLeft);
 		frameRight.copyTo(copyRight);
@@ -40,7 +40,7 @@ public:
 		return t;
 	}
 
-	void work(Mat frameLeft, Mat frameRight)
+	void work(cv::Mat frameLeft, cv::Mat frameRight)
 	{
 		for (int i = 1; i <= 100; i++)
 		{
@@ -48,22 +48,22 @@ public:
 		}
 	}
 
-	void calculate(Mat frameLeft, Mat frameRight)
+	void calculate(cv::Mat frameLeft, cv::Mat frameRight)
 	{
-		createTrackbar("Vmin", "StereoBM control", &vmin, 99, 0);
-		createTrackbar("Vmax", "StereoBM control", &vmax, 15, 0);
-		createTrackbar("Smin", "StereoBM control", &smin, 30, 0);
-		createTrackbar("mdip", "StereoBM control", &mdip, 99, 0);
+		cv::createTrackbar("Vmin", "StereoBM control", &vmin, 99, 0);
+		cv::createTrackbar("Vmax", "StereoBM control", &vmax, 15, 0);
+		cv::createTrackbar("Smin", "StereoBM control", &smin, 30, 0);
+		cv::createTrackbar("mdip", "StereoBM control", &mdip, 99, 0);
 		//createTrackbar("dmd", "StereoBM control", &dmd, 99, 0);
-		createTrackbar("bsiz", "StereoBM control", &bsiz, 99, 0);
-		createTrackbar("sp1", "StereoBM control", &sp1, 1000, 0);
-		createTrackbar("sp2", "StereoBM control", &sp2, 5000, 0);
-		createTrackbar("pfc", "StereoBM control", &pfc, 200, 0);
+		cv::createTrackbar("bsiz", "StereoBM control", &bsiz, 99, 0);
+		cv::createTrackbar("sp1", "StereoBM control", &sp1, 1000, 0);
+		cv::createTrackbar("sp2", "StereoBM control", &sp2, 5000, 0);
+		cv::createTrackbar("pfc", "StereoBM control", &pfc, 200, 0);
 		//createTrackbar("sur", "StereoBM control", &sur, 30, 0);
 		//createTrackbar("sws", "StereoBM control", &sws, 200, 0);
 		//createTrackbar("ssr", "StereoBM control", &ssr, 30, 0);
-		createTrackbar("alpha", "StereoBM control", &alpha, 300, 0);
-		createTrackbar("beta", "StereoBM control", &beta, 300, 0);
+		cv::createTrackbar("alpha", "StereoBM control", &alpha, 300, 0);
+		cv::createTrackbar("beta", "StereoBM control", &beta, 300, 0);
 
 		/*bilateralFilter(frameLeft, frameLeft, 9, 75, 75);
 		bilateralFilter(frameRight, frameRight, 9, 75, 75);*/
@@ -72,19 +72,19 @@ public:
 
 		calculateSGBM(frameLeft, frameRight);
 		normalize(disparity16U, disparity, alpha, beta, CV_MINMAX, CV_8UC3);
-		erode(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		dilate(disparity, disparity, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		erode(disparity, disparity, getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
+		dilate(disparity, disparity, getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
 	}
 
-	void calculateSGBM(Mat frameLeft, Mat frameRight)
+	void calculateSGBM(cv::Mat frameLeft, cv::Mat frameRight)
 	{
-		Ptr<StereoSGBM> sgbm = StereoSGBM::create(vmin + 1, 16 * vmax, 2 * smin + 1);
+		cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(vmin + 1, 16 * vmax, 2 * smin + 1);
 		sgbm->setMinDisparity(mdip - 50);
 		sgbm->setBlockSize(bsiz + 1);
 		sgbm->setP1(sp1 - 10);
 		sgbm->setP2(sp2 - 10);
 		sgbm->setPreFilterCap(pfc - 10);
-		sgbm->setMode(StereoSGBM::MODE_HH);
+		sgbm->setMode(cv::StereoSGBM::MODE_HH);
 
 		sgbm->compute(frameLeft, frameRight, disparity16U);
 		double min;
@@ -94,22 +94,22 @@ public:
 		cv::convertScaleAbs(disparity16U, disparity, 255 / max);
 	}
 
-	Mat getLeft()
+	cv::Mat getLeft()
 	{
 		return imgLeft;
 	}
 
-	Mat getRight()
+	cv::Mat getRight()
 	{
 		return imgRight;
 	}
 
-	virtual Mat getDisparity()
+	virtual cv::Mat getDisparity()
 	{
 		return disparity;
 	}
 
-	virtual Mat getDepth()
+	virtual cv::Mat getDepth()
 	{
 		return depth;
 	}

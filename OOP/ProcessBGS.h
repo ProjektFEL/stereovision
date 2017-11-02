@@ -8,16 +8,16 @@
 class ProcessBGS : public IProcess {
 private:
 	thread *t;
-	Mat copyLeft, copyRight, copyDisparity;
-	Mat  framePrekazky;
+	cv::Mat copyLeft, copyRight, copyDisparity;
+	cv::Mat  framePrekazky;
 	int olda, oldb, oldc;
-	Mat backgroundImage, ObjectCoordinates;
-	String motion;
+	cv::Mat backgroundImage, ObjectCoordinates;
+	cv::String motion;
 	
 public:	 
 	ProcessBGS(){
 		int olda = 0, oldb = 0, oldc = 0;
-		backgroundImage = imread("gradient.png", CV_LOAD_IMAGE_GRAYSCALE);
+		backgroundImage = cv::imread("gradient.png", CV_LOAD_IMAGE_GRAYSCALE);
 		
 		
 	}
@@ -26,7 +26,7 @@ public:
 	{}
 
 
-	thread* run(mutex* z, Mat frameLeft, Mat frameRight)
+	thread* run(mutex* z, cv::Mat frameLeft, cv::Mat frameRight)
 	{
 		z->lock();
 		frameLeft.copyTo(copyLeft);
@@ -36,7 +36,7 @@ public:
 		return t;
 	}
 
-	void work(Mat frameLeft, Mat frameRight){
+	void work(cv::Mat frameLeft, cv::Mat frameRight){
 		for (int i = 1; i <= 100; i++)
 		{
 			cout << "ProcessBGS: " << i << endl;
@@ -44,7 +44,7 @@ public:
 	}
 
 
-	void process(Mat disparity, Mat frameRight){
+	void process(cv::Mat disparity, cv::Mat frameRight){
 
 		//Capture disparityFrame;
 		//disparityFrame = disparityFrame.stereoCalc(dFrameL, dFrameR, disparity);
@@ -53,10 +53,10 @@ public:
 		 // disparityFrame.setFrame(croped);
 		//imshow("ranged", disparityFrame.getFrame());
 		// imwrite("haha.png", disparityFrame.getFrame());
-		Mat diffImage;
+		cv::Mat diffImage;
 		absdiff(backgroundImage, disparity, diffImage);
 
-		Mat foregroundMask = Mat::zeros(diffImage.rows, diffImage.cols, CV_8UC1);
+		cv::Mat foregroundMask = cv::Mat::zeros(diffImage.rows, diffImage.cols, CV_8UC1);
 
 		float threshold = 30.0f;
 		float dist;
@@ -65,7 +65,7 @@ public:
 		{
 			for (int i = 0; i<diffImage.cols; ++i)
 			{
-				Scalar pix = diffImage.at<uchar>(j, i);
+				cv::Scalar pix = diffImage.at<uchar>(j, i);
 
 				dist = (pix[0] * pix[0] + pix[1] * pix[1] + pix[2] * pix[2]);
 				dist = sqrt(dist);
@@ -77,12 +77,12 @@ public:
 			}
 		}
 
-		Mat selected;
+		cv::Mat selected;
 		inRange(foregroundMask, 100, 255, foregroundMask);
 		//imshow("foregroundMask", foregroundMask);
 		disparity.copyTo(selected, foregroundMask);
 
-		erode(selected, selected, Mat(), Point(-1, -1), 1, 1, 1);
+		erode(selected, selected, cv::Mat(), cv::Point(-1, -1), 1, 1, 1);
 		int a = 0, b = 0, c = 0;
 
 		a = detect_object(selected, 0, 79); // ak sa zmeni rozlisenie, treba zmenit aj toto
@@ -92,37 +92,37 @@ public:
 		if (a != olda || b != oldb || c != oldc)
 		{
 			motion = motionCar(a, b, c);
-			ObjectCoordinates = (Mat_<double>(3, 1) << a,b,c);
+			ObjectCoordinates = (cv::Mat_<double>(3, 1) << a,b,c);
 			olda = a;
 			oldb = b;
 			oldc = c;
 		}
 
-		putText(selected, motion, Point2f(20, 20), FONT_HERSHEY_PLAIN, 0.9, CV_RGB(0, 0, 255), 1, LINE_AA);
+		putText(selected, motion, cv::Point2f(20, 20), cv::FONT_HERSHEY_PLAIN, 0.9, CV_RGB(0, 0, 255), 1, cv::LINE_AA);
 		//imshow("raged", selected);
 		framePrekazky = selected;
 	
 	 }
 
-	 Mat getFrame(){
+	 cv::Mat getFrame(){
 		 return framePrekazky;
 	 }
 
 	 // este prerobit tuto funkciu, zla navratova hodnota
-		 Mat getObject() {
+	 cv::Mat getObject() {
 			 return ObjectCoordinates;
 	 }
 
-		 int detect_object(Mat dispmap, uint x1, uint x2)
+		 int detect_object(cv::Mat dispmap, uint x1, uint x2)
 		 {
-			 Scalar valueD;
+			 cv::Scalar valueD;
 			 int i, j, y1 = 0, y2 = 239, pb = 0;
 			 int prem = 0;
 			 for (i = x1; i <= x2; i++)
 			 {
 				 for (j = y1; j <= y2; j++)
 				 {
-					 valueD = dispmap.at<uchar>(Point(i, j));
+					 valueD = dispmap.at<uchar>(cv::Point(i, j));
 					 if ((valueD.val[0]>50) && (valueD.val[0] <= 255))
 					 {
 						 pb++;
