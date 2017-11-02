@@ -7,6 +7,8 @@ using namespace std;
 IPM::IPM( const cv::Size& _origSize, const cv::Size& _dstSize, const std::vector<cv::Point2f>& _origPoints, const std::vector<cv::Point2f>& _dstPoints )
 	: m_origSize(_origSize), m_dstSize(_dstSize), m_origPoints(_origPoints), m_dstPoints(_dstPoints)
 {
+	findHomography(m_origPoints, m_dstPoints, CV_RANSAC);
+
 	assert( m_origPoints.size() == 4 && m_dstPoints.size() == 4 && "Orig. points and Dst. points must vectors of 4 points" );
 	m_H = getPerspectiveTransform( m_origPoints, m_dstPoints );
 	m_H_inv = m_H.inv();

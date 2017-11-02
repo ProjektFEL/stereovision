@@ -1,6 +1,6 @@
 
 #include "IDisparity.h"
-#include "DispSGBM.h"
+#include "SGBM.h"
 #include "ProcessA.h"
 #include "ProcessB.h"
 #include "ProcessC.h"
@@ -12,7 +12,7 @@
 #include "IControl.h"
 #include "ICapture.h"
 #include "IProcess.h"
-#include "CapZED3D.h"
+#include "Capture.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -31,7 +31,7 @@
 #include "opencv2/video/background_segm.hpp"
 
 //#define sgbm
-#define capzed3d
+#define cap
 //#define proca // background substractor ktory nerobi nic
 //#define procb // jozkov linedetect
 #define procc // hladanie ciar patoziak
@@ -95,7 +95,7 @@ public:
 			processBGS = new ProcessBGS();
 #endif
 
-		#ifdef capzed3d
+		#ifdef cap
 			property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 			string strPath1 = pt.get<string>("VideoInput.VideoInput1");
 			string strPath2 = pt.get<string>("VideoInput.VideoInput2");
@@ -105,11 +105,11 @@ public:
 				 iPath1 = boost::lexical_cast<int>(strPath1);   // ak je v subore cislo = vstup z kamery
 				 iPath2 = boost::lexical_cast<int>(strPath2);
 
-				capture = new CapZED3D(iPath1, iPath2);
+				capture = new Capture(iPath1, iPath2);
 			}
 			catch (...)
 			{
-				capture = new CapZED3D(strPath1, strPath2);  // ak je v subore cesta na video file
+				capture = new Capture(strPath1, strPath2);  // ak je v subore cesta na video file
 			}   
 		#endif
 	   

@@ -64,9 +64,6 @@ public:
 
 		pMOG->apply(disparity, removedGradient);
 		//pMOG2->apply(disparity, removedGradient);
-
-
-		
 	 }
 
 	cv::Mat getFrame(){

@@ -12,7 +12,7 @@
 
 #define PI 3.14159265
 
-using namespace boost;
+using namespace boost::property_tree;
 using namespace std;
 
 
@@ -33,29 +33,49 @@ private:
 public:
 	// konstruktor, nacitavanie atributov zo suboru (este treba dorobit)
 	ProcessC() {
-		cny_threshold = 100;
-		cny_thresholdL = 50;
-		cny_thresholdH = 150;
-		cny_apertureSize = 3;
-		trsh_maxValue = 255;
-		trsh_blockSize = 5;
-		trsh_constant = 7;
-		trsh_constant_Compt = 50;
-		hough_rho = 1;
-		hough_theta = CV_PI / 180;
-		hough_tresh = 20;
-		hough_minLength = 20;
-		hough_maxLine = 300;
-		angleMaxLeft = 0, angleMinLeft = 0, angleMaxRight = 0, angleMinRight = 0;
-		low_r = 0, low_g = 185, low_b = 0;
-		roiX = 50, roiY = 50, roiW = 100, roiH = 100;
+		ptree pt;
+		ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
+		try
+		{   //nie som si isty ci potrebujeme mat vsetky atributy nacitane
+			cny_threshold = boost::lexical_cast<int>(pt.get<string>("ProcessC.cny_threshold"));
+			cny_thresholdL = boost::lexical_cast<int>(pt.get<string>("ProcessC.cny_thresholdL"));
+			cny_thresholdH = boost::lexical_cast<int>(pt.get<string>("ProcessC.cny_thresholdH"));
+			cny_apertureSize = boost::lexical_cast<int>(pt.get<string>("ProcessC.cny_apertureSize"));
+			trsh_maxValue = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_maxValue"));
+			trsh_blockSize = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_blockSize"));
+			trsh_constant = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_constant"));
+			trsh_constant_Compt = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_constant_Compt"));
+			hough_rho = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_rho"));
+			hough_tresh = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_tresh"));
+			hough_minLength = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_minLength"));
+			hough_maxLine = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_maxLine"));
+			angleMaxLeft = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMaxLeft"));
+			angleMinLeft = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMinLeft"));
+			angleMaxRight = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMaxRight"));
+			angleMinRight = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMinRight"));
+			low_r = boost::lexical_cast<int>(pt.get<string>("ProcessC.low_r"));
+			low_g = boost::lexical_cast<int>(pt.get<string>("ProcessC.low_g"));
+			low_b = boost::lexical_cast<int>(pt.get<string>("ProcessC.low_b"));
+			roiX = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiX"));
+			roiY = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiY"));
+			roiH = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiH"));
+			kernelSize = boost::lexical_cast<int>(pt.get<string>("ProcessC.kernelSize"));
+			Maska = boost::lexical_cast<int>(pt.get<string>("ProcessC.Maska"));
+			topLeftX = boost::lexical_cast<int>(pt.get<string>("ProcessC.topLeftX"));
+			topLeftY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topLeftY"));
+			topRightX = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightX"));
+			topRightY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightY"));
 
+		}
+		catch (...)
+		{
+			cout << "Error in parsing parameters in ProcessC!" << endl;
+		}
+
+		hough_theta = CV_PI / 180;
 		cvNamedWindow("LaneDetect control C", CV_WINDOW_AUTOSIZE);
 		cv::resizeWindow("LaneDetect control C", 400, 700);
 		cv::moveWindow("LaneDetect control C", 1300, 0);
-		kernelSize = 7;
-		Maska = 1;
-		topLeftX = 95, topLeftY = 60, topRightX = 290, topRightY = 60;
 	}
 
 	thread* run(mutex* z, cv::Mat frameLeft, cv::Mat frameRight) {
@@ -153,7 +173,6 @@ public:
 		drawContours(mask, co_ordinates, 0, cv::Scalar(255), CV_FILLED, 8);
 		
 		return mask;
-		
 	}
 
 	void laneAssist(cv::Mat frameRoi, cv::Mat imageRoi) {

@@ -4,7 +4,7 @@
 #include <opencv2/calib3d.hpp>
 #include "opencv2/opencv.hpp"
 
-class DispSGBM : public IDisparity{
+class SGBM : public IDisparity{
 private:
 	thread *t;
 	cv::Mat copyLeft, copyRight;
@@ -16,7 +16,7 @@ private:
 	//string filename = "0";
 	
 public:
-	DispSGBM()
+	SGBM()
 	{
 		vmin = 16, vmax = 3, smin = 0, mdip = 39, ndip = 10, sp1 = 655, sp2 = 30, pfc = 0, sm = 10, bsiz = 3;
 //		dmd = 99, sur = 17, sws = 10, ssr = 10;
@@ -27,7 +27,7 @@ public:
 		cv::moveWindow("StereoBM control", 1000, 0);
 	}
 
-	~DispSGBM()
+	~SGBM()
 	{}
 
 
@@ -36,7 +36,7 @@ public:
 		frameLeft.copyTo(copyLeft);
 		frameRight.copyTo(copyRight);
 		z->unlock();
-		t = new thread(&DispSGBM::calculate, this, copyLeft, copyRight);
+		t = new thread(&SGBM::calculate, this, copyLeft, copyRight);
 		return t;
 	}
 

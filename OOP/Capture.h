@@ -19,7 +19,7 @@ using namespace std;
 
 using namespace sl;
 #include <iostream>
-class CapZED3D: public ICapture {
+class Capture: public ICapture {
 	
 
 public:
@@ -28,6 +28,7 @@ public:
 	cv::Mat rgb, depth, object;
 	cv::VideoCapture capture[2];
 	cv::Size size;
+	int width, height;
 	int sigmaColor, sigmaSpace, borderType, erodeSizeW, erodeSizeH, dilateSizeW, dilateSizeH, grayScale, isCameraZed, isOpenmpEnabled;
 	property_tree::ptree pt; // citac .ini suborov
 	bool isInputCamera;
@@ -43,12 +44,12 @@ public:
 	
 
 	// parameters are videoFile(path to file) 
-	CapZED3D(string pPath1, string pPath2)
+	Capture(string pPath1, string pPath2)
 	{
 		isInputCamera = false;
 		capture[0].open(pPath1);
 		capture[1].open(pPath2);
-		size = cv::Size(480,320);
+		
 		property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 		try
 		{   //nie som si isty ci potrebujeme mat vsetky atributy nacitane
@@ -61,11 +62,16 @@ public:
 			sigmaSpace = boost::lexical_cast<int>(pt.get<string>("BilateralFilter.sigmaSpace"));
 			borderType = boost::lexical_cast<int>(pt.get<string>("BilateralFilter.borderType"));
 			grayScale = boost::lexical_cast<int>(pt.get<string>("VideoInput.GrayScale"));
+			width = boost::lexical_cast<int>(pt.get<string>("VideoInput.width"));
+			height = boost::lexical_cast<int>(pt.get<string>("VideoInput.height"));
 		}
 		catch (...)
 		{
 			cout << "Error in parsing Filter in CaptureZen3D!" << endl;
 		}
+
+		size = cv::Size(width, height);
+
 		cvNamedWindow("InputFilter control", CV_WINDOW_AUTOSIZE);
 		cv::resizeWindow("InputFilter control", 400, 500);
 		cv::moveWindow("InputFilter control", 800, 0);
@@ -73,7 +79,7 @@ public:
 		
 	}
 	// parameters are usb input(number)
-	CapZED3D(int pPath1, int pPath2)
+	Capture(int pPath1, int pPath2)
 	{
 		property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 		try
@@ -146,7 +152,7 @@ public:
 		}
 	}
 
-	~CapZED3D()
+	~Capture()
 	{}
 
 	virtual void process()
