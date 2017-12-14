@@ -8,17 +8,20 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/lexical_cast.hpp>
+#include <stack>
+#include <algorithm>
 #include <math.h>
 
 #define PI 3.14159265
 
-using namespace boost::property_tree;
+using namespace boost;
 using namespace std;
 
 
 class ProcessC : public IProcess {
 private:
 	thread* t;
+	property_tree::ptree pt;  // citac .ini suborov
 	cv::Mat copyLeft, copyRight;
 	cv::Mat imageROI, frame1, original, frameEroded, temp, img;
 	int cny_threshold, cny_thresholdL, cny_thresholdH, cny_apertureSize,
@@ -29,12 +32,22 @@ private:
 		angleMinRight_Compt;
 	int kernelSize, low_r, low_g, low_b;
 	int roiX, roiY, roiW, roiH, Maska, topLeftX, topLeftY, topRightX, topRightY;
+	//stack<vector<cv::Point>> *bufferExtendRightPoints, *bufferExtendLeftPoints;
+	stack<cv::Point> *bufferPointsVL, *bufferPointsVR, *bufferPointsBL, *bufferPointsBR;
+	stack <double> bufferAngles;
 
 public:
 	// konstruktor, nacitavanie atributov zo suboru (este treba dorobit)
 	ProcessC() {
-		ptree pt;
-		ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
+		//bufferExtendRightPoints = new stack<vector<cv::Point>>();
+		//bufferExtendLeftPoints = new stack<vector<cv::Point>>();
+		bufferPointsVL = new stack<cv::Point>();
+		bufferPointsVR = new stack<cv::Point>();
+		bufferPointsBL = new stack<cv::Point>();
+		bufferPointsBR = new stack<cv::Point>();
+
+
+		property_tree::ini_parser::read_ini("config.ini", pt);  // nacitavanie zo suboru config.ini
 		try
 		{   //nie som si isty ci potrebujeme mat vsetky atributy nacitane
 			cny_threshold = boost::lexical_cast<int>(pt.get<string>("ProcessC.cny_threshold"));
@@ -45,10 +58,11 @@ public:
 			trsh_blockSize = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_blockSize"));
 			trsh_constant = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_constant"));
 			trsh_constant_Compt = boost::lexical_cast<int>(pt.get<string>("ProcessC.trsh_constant_Compt"));
-			hough_rho = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_rho"));
-			hough_tresh = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_tresh"));
-			hough_minLength = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_minLength"));
-			hough_maxLine = boost::lexical_cast<int>(pt.get<string>("ProcessC.hough_maxLine"));
+			hough_rho = boost::lexical_cast<double>(pt.get<string>("ProcessC.hough_rho"));
+			hough_theta = CV_PI / 180;
+			hough_tresh = boost::lexical_cast<double>(pt.get<string>("ProcessC.hough_tresh"));
+			hough_minLength = boost::lexical_cast<double>(pt.get<string>("ProcessC.hough_minLength"));
+			hough_maxLine = boost::lexical_cast<double>(pt.get<string>("ProcessC.hough_maxLine"));
 			angleMaxLeft = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMaxLeft"));
 			angleMinLeft = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMinLeft"));
 			angleMaxRight = boost::lexical_cast<int>(pt.get<string>("ProcessC.angleMaxRight"));
@@ -58,6 +72,7 @@ public:
 			low_b = boost::lexical_cast<int>(pt.get<string>("ProcessC.low_b"));
 			roiX = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiX"));
 			roiY = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiY"));
+			roiW = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiW"));
 			roiH = boost::lexical_cast<int>(pt.get<string>("ProcessC.roiH"));
 			kernelSize = boost::lexical_cast<int>(pt.get<string>("ProcessC.kernelSize"));
 			Maska = boost::lexical_cast<int>(pt.get<string>("ProcessC.Maska"));
@@ -65,14 +80,11 @@ public:
 			topLeftY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topLeftY"));
 			topRightX = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightX"));
 			topRightY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightY"));
-
 		}
 		catch (...)
 		{
-			cout << "Error in parsing parameters in ProcessC!" << endl;
+			cout << "Error in parsing LaneAssistKoef in ProcessB!" << endl;
 		}
-
-		hough_theta = CV_PI / 180;
 		cvNamedWindow("LaneDetect control C", CV_WINDOW_AUTOSIZE);
 		cv::resizeWindow("LaneDetect control C", 400, 700);
 		cv::moveWindow("LaneDetect control C", 1300, 0);
@@ -94,7 +106,6 @@ public:
 	}
 
 	void process(cv::Mat frameLeft, cv::Mat frameRight) {
-		// int low_r = 0, low_g = 200, low_b = 0;
 		int high_r = 255, high_g = 255, high_b = 255;
 		cv::Mat frameHls, frametresh, frameGauss, frameAdded, frameCanny, frameRoi;
 
@@ -173,6 +184,7 @@ public:
 		drawContours(mask, co_ordinates, 0, cv::Scalar(255), CV_FILLED, 8);
 		
 		return mask;
+		
 	}
 
 	void laneAssist(cv::Mat frameRoi, cv::Mat imageRoi) {
@@ -198,26 +210,42 @@ public:
 		medianRightPoints[0].x += frameRoi.size().width / 2;
 		medianRightPoints[1].x += frameRoi.size().width / 2;
 
+		////removing coordinates errors
+		//removeCoordinatesErrors(medianRightPoints, *bufferExtendLeftPoints);
+		//removeCoordinatesErrors(medianLeftPoints, *bufferExtendRightPoints);
+
+		//vector<cv::Point> resultLeftPoints, resultRightPoints;
+
+		//resultLeftPoints = bufferExtendLeftPoints->top();
+		//resultRightPoints = bufferExtendRightPoints->top();
+
+
 		medianRightPoints = ascendPoints(medianRightPoints);
 		medianLeftPoints = ascendPoints(medianLeftPoints);
 
 		extendLeftPoints = extendPoints(imageRoi, medianLeftPoints);
 		extendRightPoints = extendPoints(imageRoi, medianRightPoints);
 
-		if (!extendRightPoints.empty() && !extendRightPoints.empty()) {
-			drawMiddleLine(imageRoi, cv::Scalar(0, 0, 0));
-			
+		drawMiddleLine(imageRoi, cv::Scalar(0, 0, 0));
+		
+		if (!extendRightPoints.empty()) {
 			line(imageRoi, extendLeftPoints[0], extendLeftPoints[1], leftLineColor, 2,
 				8, 0);
+		}
+
+		if (!extendLeftPoints.empty()) {
 			line(imageRoi, extendRightPoints[0], extendRightPoints[1], rightLineColor,
 				2, 8, 0);
-			/*cout << "Pravy1"<< extendRightPoints[0] << endl;
-			cout << "Pravy2" << extendRightPoints[1] << endl;*/
+		}
+			//cout << "Pravy1"<< extendRightPoints[0] << endl;
+			//cout << "Pravy2" << extendRightPoints[1] << endl;
+			//cout << "lavy1" << extendRightPoints[0] << endl;
+			//cout << "lavy2" << extendRightPoints[1] << endl;
 
 			result =
-				calculateWheel(imageRoi, medianLeftPoints, leftLineColor,
+				calculateWheelAngle(imageRoi, medianLeftPoints, leftLineColor,
 				medianRightPoints, rightLineColor, yBase, yVertex);
-		}
+		//}
 	}
 
 	// cut image
@@ -268,6 +296,55 @@ public:
 		return middlePoints;
 	}
 
+	void removeCoordinatesErrors(vector<cv::Point> extendPoints, stack<vector<cv::Point>>  &bufferExtendPoints)
+	{
+		vector<cv::Point> topBuffer(2), temp(2);
+		cv::Point firstPoint, secondPoint;
+		if (!extendPoints.empty())
+		{
+			firstPoint = extendPoints[0];
+			secondPoint = extendPoints[1];
+
+			if ((firstPoint.x > roiW * -4 && firstPoint.x < roiW * 4) && (firstPoint.y > roiH * -4 && firstPoint.y < roiH * 4))
+			{
+				temp[0] = firstPoint;
+			}
+			else
+			{
+				temp[0] = cv::Point(0, 0);
+			}
+			if ((secondPoint.x > roiW * -4 && secondPoint.x < roiW * 4) && (secondPoint.y > roiH * -4 && secondPoint.y < roiH * 4))
+			{
+				temp[1] = secondPoint;
+			}
+			else
+			{
+				temp[1] = cv::Point(0, 0);
+			}
+
+			if (!bufferExtendPoints.empty())
+			{
+				topBuffer = bufferExtendPoints.top();
+				if (temp[0].x == 0 && temp[0].y == 0 && (topBuffer[0].x != temp[0].x || topBuffer[0].y != temp[0].y))
+				{
+					temp[0] = topBuffer[0];
+				}
+				if (temp[1].x == 0 && temp[1].y == 0 && (topBuffer[1].x != temp[1].x || topBuffer[1].y != temp[1].y))
+				{
+					temp[1] = topBuffer[1];
+				}
+			}
+			bufferExtendPoints.push(temp);
+		}
+		if (bufferExtendPoints.size() > 3)
+		{
+			temp = bufferExtendPoints.top();
+			bufferExtendPoints = stack<vector<cv::Point>>();
+			bufferExtendPoints.push(temp);
+
+		}
+	}
+
 	// calculate quicksort ascedent according to middle points
 	vector<vector<cv::Point>> quicksort(vector<vector<cv::Point>> points,
 		vector<cv::Point> middlePoints) {
@@ -294,33 +371,46 @@ public:
 
 	/* chyba popis
 	*/
-	vector<double> calculateWheel(cv::Mat image, vector<cv::Point> leftPoints,
+	vector<double> calculateWheelAngle(cv::Mat image, vector<cv::Point> leftPoints,
 		cv::Scalar leftLineColor, vector<cv::Point> rightPoints,
 		cv::Scalar rightLineColor, int yBase, int yVertex) {
-		vector<double> result;
-		double coefficient, direction, alfa, delta;
-		int xBS, xVS, yBS = yBase, yVS = yVertex, x0;
+		int yBS = yBase, yVS = yVertex;
 
 		cv::Point pointVL = findPointOnImage(image, yVS, leftLineColor);
 		cv::Point pointVR = findPointOnImage(image, yVS, rightLineColor);
 		cv::Point pointBL = findPointOnImage(image, yBS, leftLineColor);
 		cv::Point pointBR = findPointOnImage(image, yBS, rightLineColor);
 
-		xBS = (pointBL.x + pointBR.x) / 2;
-		xVS = (pointVL.x + pointVR.x) / 2;
+		//removing findingpoints errors
+		removeFindedPointErrors(*bufferPointsVL, pointVL);
+		removeFindedPointErrors(*bufferPointsVR, pointVR);
+		removeFindedPointErrors(*bufferPointsBL, pointBL);
+		removeFindedPointErrors(*bufferPointsBR, pointBR);
+		pointVL = bufferPointsVL->top();
+		pointVR = bufferPointsVR->top();
+		pointBL = bufferPointsBL->top();
+		pointBR = bufferPointsBR->top();
 
-		coefficient = (double)(leftPoints[0].x + leftPoints[1].x) /
+
+		int xBS = (pointBL.x + pointBR.x) / 2;
+		int xVS = (pointVL.x + pointVR.x) / 2;
+
+		double coefficient = (double)(leftPoints[0].x + leftPoints[1].x) /
 			(leftPoints[0].y + leftPoints[1].y);
 
-		direction = (image.size().width / 2) > xBS ? 1 : 0;
-		alfa = (double)(atan((double)(xVS - xBS) / (yBS - yVS)) * 180 / PI);
-		delta = image.size().width / 2 - xBS;
+		//direction = (image.size().width / 2) > xBS ? 1 : 0;
+		double angle = (double)(atan((double)(xVS - xBS) / (yBS - yVS)) * 180 / PI);
+		double delta = image.size().width / 2 - xBS;
 
-		if (alfa > 0) { drawWheelAngle(image, alfa, xBS, yBS, xVS, yVS, cv::Scalar(0, 0, 255)); }
-		else { drawWheelAngle(image, alfa, xBS, yBS, xVS, yVS, cv::Scalar(255, 0, 0)); }
+		//removing angle errors
+		removeWheelAnglesErrors(angle);
 
-		
-		result = { alfa, delta, direction };
+		//show result
+		if (bufferAngles.top() > 0) { drawWheelAngle(image, bufferAngles.top(), xBS, yBS, xVS, yVS, rightLineColor); }
+		else { drawWheelAngle(image, bufferAngles.top(), xBS, yBS, xVS, yVS, leftLineColor); }
+
+		//result = { angle, delta, direction };
+		vector<double> result = { angle, delta };
 
 		return result;
 	}
@@ -364,6 +454,77 @@ public:
 		}
 		return points;
 	}
+
+
+	//metoda ukada do zasobnika nenulove body
+	void removeFindedPointErrors(stack<cv::Point> &bufferPoints, cv::Point findedPoint)
+	{
+		cv::Point temp;
+		if (bufferPoints.empty())
+		{
+			cout << "ukladam do buffera: " << findedPoint << endl;
+			bufferPoints.push(findedPoint);
+		}
+		else
+		{
+			cout << "vrchol zasobnika: " << bufferPoints.top() << endl;
+			if (!findedPoint.x == 0 && !findedPoint.y == 0)
+			{
+				cout << "-----------------" << endl;
+				cout << "ukladam do buffera: " << findedPoint << endl;
+				bufferPoints.push(findedPoint);
+			}
+		}
+
+		if (bufferPoints.size() > 3)
+		{
+			temp = bufferPoints.top();
+			bufferPoints = stack<cv::Point>();
+			bufferPoints.push(temp);
+			cout << bufferPoints.size() << endl;
+		}
+	}
+
+	/*
+	metoda kontroluje posledny ulozeny uhol v bufferi a porovnava ho s aktualnym v pripade ze je aktualny <> aspon o 5 stupnov tak 
+	ho ulozi na vrchol zasobnika a okrem toho ho vrati
+	*/
+	void removeWheelAnglesErrors(double angle)
+	{
+		double resultAngle = angle;
+		if (bufferAngles.empty() == false)
+		{
+			if (angle != bufferAngles.top())
+				{
+				//compare actual angle and angle on a top of buffer if is bigger than 5 degrees
+				if (angle > bufferAngles.top() && angle - bufferAngles.top() > 5)
+				{
+					resultAngle = angle;
+					bufferAngles.push(angle);
+				}
+				//compare actual angle and angle on a top of buffer if is smaller than 5 degrees
+				else if (angle < bufferAngles.top() && angle - bufferAngles.top()< 5)
+				{
+					resultAngle = angle;
+					bufferAngles.push(angle);
+				}
+			}
+		}
+		else
+		{
+			bufferAngles.push(angle);
+			resultAngle = angle;
+		}
+
+		if (bufferAngles.size() > 3)
+		{
+			resultAngle = bufferAngles.top();
+			bufferAngles = stack<double>();
+			bufferAngles.size();
+			bufferAngles.push(resultAngle);
+		}
+	}
+
 
 	/*! \fn vector<Point> ascendPoints(vector<Point> points)
 	\brief Sort points ascending to vector according to y values.
@@ -419,7 +580,21 @@ public:
 
 	cv::Mat getFrame() { return frame1; }
 
-	~ProcessC() {}
+	~ProcessC() {
+		//delete bufferExtendRightPoints;
+		//bufferExtendRightPoints = NULL;
+		//delete bufferExtendLeftPoints;
+		//bufferExtendLeftPoints = NULL;
+		delete bufferPointsVL;
+		bufferPointsVL = NULL;
+		delete bufferPointsVR;
+		bufferPointsVR = NULL;
+		delete bufferPointsBL;
+		bufferPointsBL = NULL;
+		delete bufferPointsBR;
+		bufferPointsBR = NULL;
+
+	}
 
 	
 };
