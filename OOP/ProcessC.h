@@ -462,16 +462,16 @@ public:
 		cv::Point temp;
 		if (bufferPoints.empty())
 		{
-			cout << "ukladam do buffera: " << findedPoint << endl;
+			//cout << "ukladam do buffera: " << findedPoint << endl;
 			bufferPoints.push(findedPoint);
 		}
 		else
 		{
-			cout << "vrchol zasobnika: " << bufferPoints.top() << endl;
+			//cout << "vrchol zasobnika: " << bufferPoints.top() << endl;
 			if (!findedPoint.x == 0 && !findedPoint.y == 0)
 			{
-				cout << "-----------------" << endl;
-				cout << "ukladam do buffera: " << findedPoint << endl;
+				//cout << "-----------------" << endl;
+				//cout << "ukladam do buffera: " << findedPoint << endl;
 				bufferPoints.push(findedPoint);
 			}
 		}
@@ -491,7 +491,7 @@ public:
 	*/
 	void removeWheelAnglesErrors(double angle)
 	{
-		double resultAngle = angle;
+		double pom;
 		if (bufferAngles.empty() == false)
 		{
 			if (angle != bufferAngles.top())
@@ -499,13 +499,11 @@ public:
 				//compare actual angle and angle on a top of buffer if is bigger than 5 degrees
 				if (angle > bufferAngles.top() && angle - bufferAngles.top() > 5)
 				{
-					resultAngle = angle;
 					bufferAngles.push(angle);
 				}
 				//compare actual angle and angle on a top of buffer if is smaller than 5 degrees
 				else if (angle < bufferAngles.top() && angle - bufferAngles.top()< 5)
 				{
-					resultAngle = angle;
 					bufferAngles.push(angle);
 				}
 			}
@@ -513,15 +511,19 @@ public:
 		else
 		{
 			bufferAngles.push(angle);
-			resultAngle = angle;
+		}
+
+		if (angle  < 5 && angle > -5)
+		{
+			bufferAngles.push(0);
 		}
 
 		if (bufferAngles.size() > 3)
 		{
-			resultAngle = bufferAngles.top();
+			pom = bufferAngles.top();
 			bufferAngles = stack<double>();
 			bufferAngles.size();
-			bufferAngles.push(resultAngle);
+			bufferAngles.push(pom);
 		}
 	}
 
