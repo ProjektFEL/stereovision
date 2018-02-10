@@ -1,1 +1,0 @@
-celu zlozku treba nakopcit do projektu VS

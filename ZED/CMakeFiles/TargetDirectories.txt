@@ -1,0 +1,3 @@
+/home/ubuntu/Documents/ZED/CMakeFiles/rebuild_cache.dir
+/home/ubuntu/Documents/ZED/CMakeFiles/edit_cache.dir
+/home/ubuntu/Documents/ZED/CMakeFiles/ZED_Stereovision.dir
