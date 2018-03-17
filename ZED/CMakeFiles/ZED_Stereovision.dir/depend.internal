@@ -8,6 +8,7 @@ CMakeFiles/ZED_Stereovision.dir/src/main.o
  /home/ubuntu/Documents/ZED/src/Application.h
  /home/ubuntu/Documents/ZED/src/CapZED3D.h
  /home/ubuntu/Documents/ZED/src/ControlA.h
+ /home/ubuntu/Documents/ZED/src/ControlB.h
  /home/ubuntu/Documents/ZED/src/DetectionA.h
  /home/ubuntu/Documents/ZED/src/DispSGBM.h
  /home/ubuntu/Documents/ZED/src/ICapture.h
@@ -24,6 +25,7 @@ CMakeFiles/ZED_Stereovision.dir/src/main.o
  /home/ubuntu/Documents/ZED/src/ProcessC.h
  /home/ubuntu/Documents/ZED/src/ProcessIPM.h
  /home/ubuntu/Documents/ZED/src/ProcessK.h
+ /home/ubuntu/Documents/ZED/src/ProcessS.h
  /home/ubuntu/Documents/ZED/src/main.cpp
  /usr/local/cuda-6.5/include/builtin_types.h
  /usr/local/cuda-6.5/include/channel_descriptor.h

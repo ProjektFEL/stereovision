@@ -12,7 +12,7 @@ using namespace boost;
 using namespace std;
 
 class ProcessK : public IProcess {
-private: 
+private:
 	thread *t;
 	cv::Mat copyLeft, copyRight;
 	cv::Mat frame1;
@@ -88,6 +88,10 @@ public:
 
 	// este prerobit tuto funkciu, zla navratova hodnota
 	cv::Mat getObject() {
+		 return frame1;
+	 }
+
+	 cv::Mat getDisparity(){
 		 return frame1;
 	 }
 

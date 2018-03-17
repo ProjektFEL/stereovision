@@ -180,4 +180,8 @@ public:
 	return 0;
 	}
 
+	cv::Mat getDisparity(){
+		 return framePrekazky;
+	 }
+
 };

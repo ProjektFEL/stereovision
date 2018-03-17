@@ -1,7 +1,7 @@
 [VideoInput]
 VideoInput1= 0
 VideoInput2= 0
-CameraZed=1
+CameraZed= 1
 isOpenmp=0
 GrayScale= 0
 width = 480

@@ -140,7 +140,8 @@ sl::zed::Mat imageLeft, imageRight,  point_cloud, imageDepth;
 			//init_params.camera_resolution = ZEDResolution_mode::VGA;
 
 			init_params.mode = sl::zed::MODE::PERFORMANCE;
-    init_params.unit = sl::zed::UNIT::MILLIMETER;
+            init_params.unit = sl::zed::UNIT::MILLIMETER;
+            //init_params.device = -1;
 
 			init_params.verbose = 1;
 			//init_params.svo_real_time_mode = true;
@@ -192,7 +193,7 @@ sl::zed::Mat imageLeft, imageRight,  point_cloud, imageDepth;
 
 		if (isCameraZed == 0 || isOpenmpEnabled == 1) {
 
-
+/*
 
 		omp_set_num_threads(2);
 #pragma omp parallel
@@ -229,7 +230,7 @@ sl::zed::Mat imageLeft, imageRight,  point_cloud, imageDepth;
 					}
 				}
 #pragma omp barrier
-			}
+			}*/
 
 		}
 		else if (isCameraZed == 1){
@@ -242,8 +243,9 @@ int width = zed->getImageSize().width;
     cv::Size size(width, height); // image size
 
     //imageZedDepth = new Mat(size, CV_8UC1); // normalized depth to display
-    int depth_clamp = 6000;
+    int depth_clamp = 4000;
     zed->setDepthClampValue(depth_clamp);
+    //zed->sticktoCPUCore(3);
 
 				// Grab the current images and compute the disparity
         bool res = zed->grab(STANDARD, 1, 1, 0);
@@ -251,7 +253,7 @@ imageLeft =zed->retrieveImage(sl::zed::SIDE::LEFT);
 sl::zed::slMat2cvMat(imageLeft).copyTo(display[0]);
 imageRight =zed->retrieveImage(sl::zed::SIDE::RIGHT);
 	sl::zed::slMat2cvMat(imageRight).copyTo(display[1]);
-slMat2cvMat(zed->normalizeMeasure(sl::zed::MEASURE::DEPTH)).copyTo(imageZedDepth);
+slMat2cvMat(zed->normalizeMeasure(sl::zed::MEASURE::DISPARITY)).copyTo(imageZedDepth);
   	//imageDepth = zed->retrieveMeasure(DISPARITY);
 
 

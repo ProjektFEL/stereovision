@@ -11,7 +11,7 @@
 using namespace boost;
 
 class ProcessB : public IProcess {
-private: 
+private:
 	thread *t;
 	property_tree::ptree pt;  // citac .ini suborov
 	int ptX1, ptX2, ptY1, ptY2, gray, theta1, rho1, theta2, rho2, max_lenght1, max_lenght2, edmin, edmax;
@@ -172,6 +172,10 @@ public:
 	 }
 
 	cv::Mat getObject() {
+		 return laneAssistFrame;
+	 }
+
+	 cv::Mat getDisparity(){
 		 return laneAssistFrame;
 	 }
 

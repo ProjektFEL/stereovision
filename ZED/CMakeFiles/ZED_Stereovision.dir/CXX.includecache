@@ -19,6 +19,8 @@ ProcessC.h
 /home/ubuntu/Documents/ZED/src/ProcessC.h
 ProcessK.h
 /home/ubuntu/Documents/ZED/src/ProcessK.h
+ProcessS.h
+/home/ubuntu/Documents/ZED/src/ProcessS.h
 ProcessIPM.h
 /home/ubuntu/Documents/ZED/src/ProcessIPM.h
 ProcessBGS.h
@@ -37,6 +39,10 @@ CapZED3D.h
 /home/ubuntu/Documents/ZED/src/CapZED3D.h
 ControlA.h
 /home/ubuntu/Documents/ZED/src/ControlA.h
+ControlB.h
+/home/ubuntu/Documents/ZED/src/ControlB.h
+ctime
+-
 boost/property_tree/ptree.hpp
 -
 boost/property_tree/ini_parser.hpp
@@ -115,6 +121,14 @@ iostream
 -
 
 /home/ubuntu/Documents/ZED/src/ControlA.h
+IControl.h
+/home/ubuntu/Documents/ZED/src/IControl.h
+IMotor.h
+/home/ubuntu/Documents/ZED/src/IMotor.h
+MotorA.h
+/home/ubuntu/Documents/ZED/src/MotorA.h
+
+/home/ubuntu/Documents/ZED/src/ControlB.h
 IControl.h
 /home/ubuntu/Documents/ZED/src/IControl.h
 IMotor.h
@@ -389,6 +403,16 @@ boost/property_tree/ini_parser.hpp
 -
 boost/lexical_cast.hpp
 -
+
+/home/ubuntu/Documents/ZED/src/ProcessS.h
+IProcess.h
+/home/ubuntu/Documents/ZED/src/IProcess.h
+opencv2/core.hpp
+-
+opencv2/calib3d.hpp
+-
+opencv2/opencv.hpp
+/home/ubuntu/Documents/ZED/src/opencv2/opencv.hpp
 
 /home/ubuntu/Documents/ZED/src/main.cpp
 Application.h

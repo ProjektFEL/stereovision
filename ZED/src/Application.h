@@ -5,6 +5,7 @@
 #include "ProcessB.h"
 #include "ProcessC.h"
 #include "ProcessK.h"
+#include "ProcessS.h"
 #include "ProcessIPM.h"
 #include "ProcessBGS.h"
 #include "IDetection.h"
@@ -14,6 +15,8 @@
 #include "IProcess.h"
 #include "CapZED3D.h"
 #include "ControlA.h"
+#include "ControlB.h"
+#include <ctime>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -36,29 +39,26 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <math.h>
-
-
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 #include "opencv2/video/background_segm.hpp"
 
-#define sgbm
-#define capzed3d
+#define sgbm // disparita a jej vypocet
+#define capzed3d // hlavna trieda na ziskavanie obrazu z kamier
 //#define proca // background substractor ktory nerobi nic
 //#define procb // jozkov linedetect
 //#define procc // hladanie ciar patoziak
-//#define prock
+//#define prock // kaskady na hladanie ciar
 //#define procIPM // inverzne mapovanie
-#define procBGS //chyba, asi nespravna velkost gradient.png
-//#define deta //pada do chyby treba opravit
-#define controla
-
+//#define procBGS //process na odstranenia poyadie na zaklade diferenciacii od statickeho pozadia odcitanim
+#define procs // navigacia disparitou
+//#define deta //detekcia prekazok a nasledna navigacia, pada do chyby treba opravit
+//#define controla // pomocou ciar, lane assist dava uhol natocenia tak tento control posle uhol dalej motoru
+#define controlb //pomocou vyhybania prekazkam, na vstupe ma MAT s poziciami prekazok a na zaklade toho posle uhol natocenia motoru
 
 using namespace std;
 using namespace boost;
 using namespace std::chrono;
-
-
 
 class Application{
 private:
@@ -68,24 +68,32 @@ private:
 	IDisparity *disparity;
 	ICapture *capture;
 	IDetection *detectionA;
-	IProcess *processA, *processLaneDetect, *processC, *processK, *processIPM, *processBGS;
-    IControl *controlA;
+	IProcess *processA, *processLaneDetect, *processC, *processK, *processIPM, *processBGS, *processS;
+    IControl *controlA, *controlB;
 	property_tree::ptree pt;  // citac .ini suborov
 	cv::Mat frameLeft, frameRight, frameDisparity, frameBirdView, frameLaneDetect, frameRemovedGradient, frameProcessC, frameCascade
-		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM, frameBGS, MatObjectDetected, backgroundImage;
+		, frameCloseObj, frameMediumObj, frameFarObj, frameIPM, frameBGS, MatObjectDetected, backgroundImage, frameprocessSBlizke, frameprocessSStredne,
+		frameLeftFPS;
 	bool durotationThreads;
-	bool servoControl;
+	bool servoControl, isControlB, movementProcessS, boolbrake, isVideoCapture;
 	int uholNatocenia, withMovement, iUholProcessC, iTmpUholProcessC;
 	int isCameraZed;
 	double uholProcessC;
 	cv::Size sizeIMP, sizeImage;
+	cv::VideoWriter outputFrameLeft;
+	/*fps variables*/
+	long frameCounter;
+	std::time_t timeBegin, timeNow;
+	int tick, tick2;
+	string napisFPS;
 
 
 public:
 
 	void init()
 	{
-
+        boolbrake = false;
+        isVideoCapture = false;
 		//vytvorenie a inicializacia objektov (smernikov)
 		#ifdef sgbm
 			disparity = new DispSGBM();
@@ -109,6 +117,11 @@ public:
 
 		#ifdef prock
 			processK = new ProcessK();
+		#endif
+
+		#ifdef procs
+			processS = new ProcessS();
+			movementProcessS = false;
 		#endif
 
 		#ifdef procIPM
@@ -158,6 +171,12 @@ public:
 			cvCreateTrackbar("Move", "Kolesa", &withMovement, 1);
 		#endif
 
+		#ifdef controlb
+			controlB = new ControlB();
+			withMovement = 0;
+			isControlB = false;
+		#endif
+
 			durotationThreads = false;
 		//tu inicializujes dalsie objekty napr. procCascades ...
 
@@ -172,21 +191,32 @@ public:
 			cout << "Error in parsing Filter in CaptureZen3D!" << endl;
 		}
 
-		namedWindow("Video input 1", cv::WINDOW_AUTOSIZE);
-		namedWindow("Video input 2", cv::WINDOW_AUTOSIZE);
+        cout << "pred oknom" << endl;
+		namedWindow("FrameLeft", cv::WINDOW_AUTOSIZE);
+		namedWindow("FrameRight", cv::WINDOW_AUTOSIZE);
 		namedWindow("Disparita", cv::WINDOW_AUTOSIZE);
 		//namedWindow("LineAssist", cv::WINDOW_AUTOSIZE);
 		//namedWindow("InversePerspectiveMapping", WINDOW_AUTOSIZE);
-		cv::moveWindow("Video input 1", 0, 0);
-		cv::moveWindow("Video input 2", 500, 0);
+		cv::moveWindow("FrameLeft", 0, 0);
+		cv::moveWindow("FrameRight", 500, 0);
 		cv::moveWindow("Disparita", 0, 450);
 		//cv::moveWindow("LineAssist", 490, 350);
 		servoControl = false;
+		cout << "Koniec init" << endl;
+
+        /*fps variables*/
+	     frameCounter = 0;
+
 	}
 
 	void cycle()
 	{
 		//int wheel; //bool direction; int strength, bool brake;
+        /*fps variables*/
+        timeBegin = std::time(0);
+        tick = 0;
+
+        outputFrameLeft = cv::VideoWriter("video_.avi", CV_FOURCC('X', 'V', 'I', 'D'), 10, sizeImage, true);
 
 		//tu sa budu volat metody a robit hlavny tok
 		while (1)//0 ak nechceme aby sa to robilo
@@ -211,8 +241,26 @@ public:
 			if (!frameLeft.empty() && !frameRight.empty())
 			{
 				try {
-					cv::imshow("Video input 1", frameLeft);
-					cv::imshow("Video input 2", frameRight);
+
+					frameCounter++;
+					timeNow = std::time(0) - timeBegin;
+					if(timeNow - tick >= 1)
+					{
+					tick++;
+					napisFPS = to_string(frameCounter);
+					frameCounter = 0;
+					}
+					frameLeft.copyTo(frameLeftFPS);
+					cv::putText(frameLeftFPS,napisFPS,cvPoint(0,25),cv::FONT_HERSHEY_SIMPLEX, 1,  cv::Scalar(255,255,255), 2);
+
+					if(isVideoCapture)
+					{
+					//outputFrameLeft.open("frameleft",CV_FOURCC('M', 'J', 'P', 'G'),15,frameLeftFPS.size(),true);
+					outputFrameLeft.write(frameLeftFPS);
+					}
+					cv::imshow("FrameLeft", frameLeftFPS);
+					cv::imshow("FrameRight", frameRight);
+
 				}
 				catch(cv::Exception & e){
 					cerr << e.msg << endl;
@@ -276,6 +324,45 @@ public:
 
 #endif
 
+#ifdef procs
+
+                if(!frameDisparity.empty()){
+				processS->process(frameDisparity, frameRight);
+
+				//processIPM->getFrame().copyTo(frameIPM);
+				//lockThread.try_lock();
+                frameprocessSBlizke = processS->getFrame();
+                frameprocessSStredne = processS->getDisparity();
+                //lockThread.unlock();
+                if(!frameprocessSBlizke.empty() && !frameprocessSStredne.empty())
+                {
+                cv::imshow("DisparitaBlizke",frameprocessSBlizke);
+                cv::imshow("DisparitaStredne",frameprocessSStredne);
+                MatObjectDetected = processS->getObject();
+                //cout << MatObjectDetected << endl;
+                if(!MatObjectDetected.empty())
+                {
+#ifdef controlb
+                if(isControlB){
+                if(withMovement == 0)
+                {
+                 controlB->process(0,false,MatObjectDetected,boolbrake);
+                }else if (withMovement == 1)
+                {
+                 controlB->process(0,true,MatObjectDetected,boolbrake);
+                }
+                if(movementProcessS){
+                controlB->process(0,true,MatObjectDetected,boolbrake);
+
+                }
+                }
+#endif
+                }
+                }
+                }
+
+#endif
+
 #ifdef deta
 				if (durotationThreads)
 					then = system_clock::now();
@@ -304,7 +391,11 @@ public:
 					MatObjectDetected = processBGS->getObject();
 
 					imshow("FrameBGS", frameBGS);
+					if(!MatObjectDetected.empty())
+					{
 					cout << MatObjectDetected << endl;
+					}
+
 					}
 #endif
 				}
@@ -340,11 +431,7 @@ public:
 
 
 
-					if (!frameProcessC.empty())
-					{
-						imshow("ProcessC", frameProcessC);
-					}
-					else { cout << "Frame processC is Empty!" << endl; }
+
 				if (!frameIPM.empty())
 				{
 					imshow("InversePerspectiveMapping", frameIPM);
@@ -367,7 +454,7 @@ public:
                           int iUholProcessC = (int)round(uholProcessC);
                           if(iUholProcessC != iTmpUholProcessC)
                           {
-                            controlA->process(iUholProcessC,false);
+                            controlA->process(iUholProcessC,false,MatObjectDetected,boolbrake);
                             //cout << "Uhol:" << iUholProcessC << endl;
                           }
                           iTmpUholProcessC = iUholProcessC; // pamatanie
@@ -380,6 +467,11 @@ public:
 					//lockThread.try_lock();
 					frameProcessC = processC->getFrame();
 					//lockThread.unlock();
+					if (!frameProcessC.empty())
+					{
+						imshow("ProcessC", frameProcessC);
+					}
+					else { cout << "Frame processC is Empty!" << endl; }
 
 
 #endif
@@ -418,9 +510,51 @@ public:
 			switch (key)
 			{
 
-                        case 'o': {printf("skusobny vypis");
+            case 'o': {printf("skusobny vypis");
+
                                   break;}
-                        case 'k': {if(servoControl)
+            case 'c': {if(isVideoCapture)
+                        {
+                        isVideoCapture = false;
+                        cout << "Nahravanie OFF" << endl;
+                        }
+                        else{
+                        isVideoCapture = true;
+                        cout << "Nahravanie ON" << endl;
+                        }
+                                  break;}
+            case 's': {if(boolbrake)
+                        {
+                        boolbrake = false;
+                        cout << "BRAKE DEACTIVATED" << endl;
+                        }
+                        else{
+                        boolbrake = true;
+                        cout << "BRAKE ACTIVATED" << endl;
+                        }
+                                  break;}
+            case 'x': {if(movementProcessS)
+                        {
+                        movementProcessS = false;
+                        cout << "ProcessS ovladanie OFF" << endl;
+                        }
+                        else{
+                        movementProcessS = true;
+                        cout << "ProcessS ovladanie ON" << endl;
+                        }
+                                  break;}
+
+            case 'l': {if(isControlB)
+                        {
+                        isControlB = false;
+                        cout << "ControlB ovladanie OFF" << endl;
+                        }
+                        else{
+                        isControlB = true;
+                        cout << "ControlB ovladanie ON" << endl;
+                        }
+                                  break;}
+            case 'k': {if(servoControl)
                         {
                         servoControl = false;
                         cout << "Servo ovladanie OFF" << endl;
@@ -430,20 +564,31 @@ public:
                         cout << "Servo ovladanie ON" << endl;
                         }
                                   break;}
-                        case 'w': {if(withMovement == 0 && servoControl== false)
-                                  {controlA->process(uholNatocenia,false);}
-                                  else if(withMovement == 1 && servoControl== false)
-                                  {controlA->process(uholNatocenia,true);}
+
+            case 'm': {if(withMovement == 1)
+                        {
+                        withMovement = 0;
+                        cout << "Motor vpred OFF" << endl;
+                        }
+                        else{
+                        withMovement = 1;
+                        cout << "Motor vpred ON" << endl;
+                        }
                                   break;}
-                        case 'a': {if(uholNatocenia >= 3)
+            case 'w': {if(withMovement == 0 && servoControl== false)
+                                  {controlA->process(uholNatocenia,false,MatObjectDetected,boolbrake);}
+                                  else if(withMovement == 1 && servoControl== false)
+                                  {controlA->process(uholNatocenia,true,MatObjectDetected,boolbrake);}
+                                  break;}
+            case 'a': {if(uholNatocenia >= 3)
                                   {uholNatocenia = uholNatocenia -3;
                                   }
-                                  controlA->process(uholNatocenia,false);
+                                  controlA->process(uholNatocenia,false,MatObjectDetected,boolbrake);
                                   break;}
-                        case 'd': {if(uholNatocenia <= 57)
+            case 'd': {if(uholNatocenia <= 57)
                                   {uholNatocenia= uholNatocenia +3;
                                   }
-                                  controlA->process(uholNatocenia,false);
+                                  controlA->process(uholNatocenia,false,MatObjectDetected,boolbrake);
                                   break;}
 			case 'i': {imwrite("disparita.png",frameDisparity);
                                   break;}
@@ -467,6 +612,7 @@ public:
 
 	void term()
 	{
+		outputFrameLeft.release();
 		if (processA)
 		{
 			delete processA;

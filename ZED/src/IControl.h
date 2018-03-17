@@ -18,7 +18,7 @@ class IControl {
 public:
 	IControl(){};
 	virtual ~IControl(){};
-	virtual void process(int uhol, bool withMovement) = 0;
+	virtual void process(int uhol, bool withMovement, cv::Mat object, bool brake) = 0;
 	virtual int getWheel() = 0;
 	virtual bool getDirection() = 0;
 	virtual int getStrength() = 0;

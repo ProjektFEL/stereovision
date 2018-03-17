@@ -32,6 +32,7 @@ public:
 	virtual cv::Mat getFrame()=0;
 	virtual double getAngle()=0;
 	virtual cv::Mat getObject()=0;
+	virtual cv::Mat getDisparity()=0;
 
 };
 

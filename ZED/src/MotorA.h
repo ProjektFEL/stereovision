@@ -9,16 +9,29 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 
+#ifndef MotorA_H
+#define MotorA_H
+
 using namespace std;
 
 class MotorA : public IMotor {
 private:
 int usbdev;
+int uholMem;
+bool initWheel;
+bool brakeMem;
+bool initBrake;
+bool movementMem;
 public:
 
 MotorA(){
 
 usbdev=open("/dev/ttyUSB0",O_RDWR);
+uholMem = 0;
+initWheel = true;
+brakeMem = false;
+initBrake = true;
+movementMem = false;
 
 	}
 
@@ -26,14 +39,54 @@ usbdev=open("/dev/ttyUSB0",O_RDWR);
 	{}
 
 	void process(int wheel, bool withMovement, int strength, bool brake){
-
-if(wheel >= 0 && wheel <= 60){
-sendCommand(usbdev, to_string(wheel), withMovement);
+if(initBrake)
+{
+brakeMem = brake;
+initBrake = false;
 }
+if(wheel >= 0 && wheel <= 60){
+if (uholMem == wheel)
+{
+if(initWheel)
+{
+sendCommand(usbdev, to_string(wheel), withMovement, brake);
+initWheel = false;
+movementMem = withMovement;
+}
+if(movementMem != withMovement)
+{
+sendCommand(usbdev, to_string(wheel), withMovement, brake);
+}
+if(brake)
+{
+sendCommand(usbdev, to_string(wheel), withMovement, brake);
+}
+
+}
+else {
+sendCommand(usbdev, to_string(wheel), withMovement, brake);
+uholMem = wheel;
+}
+}
+
 	}
 
-	void sendCommand(int usbdev, string wheel, bool withMovement){
+	void sendCommand(int usbdev, string wheel, bool withMovement, bool brake){
 	ssize_t bytes_written;
+	if(brake == true)
+	{
+	if(brakeMem){
+	//cout << "MOTOR >> STOP" << endl;
+	char commandStop[4]="";
+	commandStop[0]='P';
+	commandStop[1]='3';
+	commandStop[2]='0';
+	commandStop[3]='\n';
+	bytes_written = write(usbdev,commandStop,4);
+	brakeMem = false;
+}
+	}
+	else{
 	cout << "Uhol: "<< wheel+" "<<endl;
 	if(withMovement)
 	{
@@ -51,6 +104,7 @@ sendCommand(usbdev, to_string(wheel), withMovement);
 
 	commandForward[3]='\n';
 	bytes_written = write(usbdev,commandForward,4);
+	brakeMem = true;
 
 	}else
 	{
@@ -68,6 +122,8 @@ sendCommand(usbdev, to_string(wheel), withMovement);
 	commandServo[3]='\n';
 	bytes_written = write(usbdev,commandServo,4);
 	}
+	}
+
 
 	}
 
@@ -128,3 +184,4 @@ void noForward(int usbdev)
 }
 
 	};
+#endif

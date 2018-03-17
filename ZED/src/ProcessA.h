@@ -78,4 +78,8 @@ thread* run(mutex* z, cv::Mat frameLeft, cv::Mat frameRight) {
 	return 0;
 	}
 
+	cv::Mat getDisparity(){
+		 return diffBackground;
+	 }
+
 };

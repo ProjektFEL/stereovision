@@ -7,6 +7,7 @@ CMakeFiles/ZED_Stereovision.dir/src/IPM.o: src/IPM.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/Application.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/CapZED3D.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ControlA.h
+CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ControlB.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/DetectionA.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/DispSGBM.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ICapture.h
@@ -23,6 +24,7 @@ CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ProcessBGS.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ProcessC.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ProcessIPM.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ProcessK.h
+CMakeFiles/ZED_Stereovision.dir/src/main.o: src/ProcessS.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: src/main.cpp
 CMakeFiles/ZED_Stereovision.dir/src/main.o: /usr/local/cuda-6.5/include/builtin_types.h
 CMakeFiles/ZED_Stereovision.dir/src/main.o: /usr/local/cuda-6.5/include/channel_descriptor.h

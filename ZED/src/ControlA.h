@@ -18,9 +18,9 @@ motorA = new MotorA();
 
 	}
 
-	void process(int pUhol, bool withMovement){
+	void process(int pUhol, bool withMovement, cv::Mat object, bool brake){
 
-motorA->process(pUhol,withMovement,1,false);
+         motorA->process(pUhol,withMovement,1,brake);
 
 	}
 
