@@ -35,6 +35,8 @@ private:
 	//stack<vector<cv::Point>> *bufferExtendRightPoints, *bufferExtendLeftPoints;
 	stack<cv::Point> *bufferPointsVL, *bufferPointsVR, *bufferPointsBL, *bufferPointsBR;
 	stack <double> bufferAngles;
+	double wheelSteering, correction, diffAngle;
+	int tolerance;
 
 public:
 	// konstruktor, nacitavanie atributov zo suboru (este treba dorobit)
@@ -80,6 +82,12 @@ public:
 			topLeftY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topLeftY"));
 			topRightX = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightX"));
 			topRightY = boost::lexical_cast<int>(pt.get<string>("ProcessC.topRightY"));
+			tolerance = boost::lexical_cast<int>(pt.get<string>("ProcessC.tolerance"));
+			diffAngle = boost::lexical_cast<int>(pt.get<string>("ProcessC.diffAngle"));
+			correction = boost::lexical_cast<int>(pt.get<string>("ProcessC.correction"));
+			wheelSteering = 0;
+			
+
 		}
 		catch (...)
 		{
@@ -191,7 +199,7 @@ public:
 		vector<vector<cv::Point>> leftPartPoints, rightPartPoints;
 		vector<cv::Point> medianLeftPoints, medianRightPoints, extendLeftPoints,
 			extendRightPoints;
-		vector<double> result;
+		double result = 0;
 
 		cv::Scalar leftLineColor(255, 0, 0), rightLineColor(0, 0, 255);
 		int yBase = (int)(imageRoi.size().height - 50), yVertex = 20;
@@ -210,42 +218,12 @@ public:
 		medianRightPoints[0].x += frameRoi.size().width / 2;
 		medianRightPoints[1].x += frameRoi.size().width / 2;
 
-		////removing coordinates errors
-		//removeCoordinatesErrors(medianRightPoints, *bufferExtendLeftPoints);
-		//removeCoordinatesErrors(medianLeftPoints, *bufferExtendRightPoints);
-
-		//vector<cv::Point> resultLeftPoints, resultRightPoints;
-
-		//resultLeftPoints = bufferExtendLeftPoints->top();
-		//resultRightPoints = bufferExtendRightPoints->top();
-
-
 		medianRightPoints = ascendPoints(medianRightPoints);
 		medianLeftPoints = ascendPoints(medianLeftPoints);
-
-		extendLeftPoints = extendPoints(imageRoi, medianLeftPoints);
-		extendRightPoints = extendPoints(imageRoi, medianRightPoints);
-
-		drawMiddleLine(imageRoi, cv::Scalar(0, 0, 0));
 		
-		if (!extendRightPoints.empty()) {
-			line(imageRoi, extendLeftPoints[0], extendLeftPoints[1], leftLineColor, 2,
-				8, 0);
-		}
-
-		if (!extendLeftPoints.empty()) {
-			line(imageRoi, extendRightPoints[0], extendRightPoints[1], rightLineColor,
-				2, 8, 0);
-		}
-			//cout << "Pravy1"<< extendRightPoints[0] << endl;
-			//cout << "Pravy2" << extendRightPoints[1] << endl;
-			//cout << "lavy1" << extendRightPoints[0] << endl;
-			//cout << "lavy2" << extendRightPoints[1] << endl;
-
 			result =
 				calculateWheelAngle(imageRoi, medianLeftPoints, leftLineColor,
-				medianRightPoints, rightLineColor, yBase, yVertex);
-		//}
+				medianRightPoints, rightLineColor, yBase, yVertex, correction);
 	}
 
 	// cut image
@@ -296,55 +274,6 @@ public:
 		return middlePoints;
 	}
 
-	void removeCoordinatesErrors(vector<cv::Point> extendPoints, stack<vector<cv::Point>>  &bufferExtendPoints)
-	{
-		vector<cv::Point> topBuffer(2), temp(2);
-		cv::Point firstPoint, secondPoint;
-		if (!extendPoints.empty())
-		{
-			firstPoint = extendPoints[0];
-			secondPoint = extendPoints[1];
-
-			if ((firstPoint.x > roiW * -4 && firstPoint.x < roiW * 4) && (firstPoint.y > roiH * -4 && firstPoint.y < roiH * 4))
-			{
-				temp[0] = firstPoint;
-			}
-			else
-			{
-				temp[0] = cv::Point(0, 0);
-			}
-			if ((secondPoint.x > roiW * -4 && secondPoint.x < roiW * 4) && (secondPoint.y > roiH * -4 && secondPoint.y < roiH * 4))
-			{
-				temp[1] = secondPoint;
-			}
-			else
-			{
-				temp[1] = cv::Point(0, 0);
-			}
-
-			if (!bufferExtendPoints.empty())
-			{
-				topBuffer = bufferExtendPoints.top();
-				if (temp[0].x == 0 && temp[0].y == 0 && (topBuffer[0].x != temp[0].x || topBuffer[0].y != temp[0].y))
-				{
-					temp[0] = topBuffer[0];
-				}
-				if (temp[1].x == 0 && temp[1].y == 0 && (topBuffer[1].x != temp[1].x || topBuffer[1].y != temp[1].y))
-				{
-					temp[1] = topBuffer[1];
-				}
-			}
-			bufferExtendPoints.push(temp);
-		}
-		if (bufferExtendPoints.size() > 3)
-		{
-			temp = bufferExtendPoints.top();
-			bufferExtendPoints = stack<vector<cv::Point>>();
-			bufferExtendPoints.push(temp);
-
-		}
-	}
-
 	// calculate quicksort ascedent according to middle points
 	vector<vector<cv::Point>> quicksort(vector<vector<cv::Point>> points,
 		vector<cv::Point> middlePoints) {
@@ -369,71 +298,132 @@ public:
 		return points;
 	}
 
-	/* chyba popis
+	/* 
+	vypocet uhla natocenia podla najdenych ciar na ceste
 	*/
-	vector<double> calculateWheelAngle(cv::Mat image, vector<cv::Point> leftPoints,
+	double calculateWheelAngle(cv::Mat image, vector<cv::Point> leftPoints,
 		cv::Scalar leftLineColor, vector<cv::Point> rightPoints,
-		cv::Scalar rightLineColor, int yBase, int yVertex) {
+		cv::Scalar rightLineColor, int yBase, int yVertex, double correction) {
 		int yBS = yBase, yVS = yVertex;
+		vector<double> lineLeft, lineRight;
 
-		cv::Point pointVL = findPointOnImage(image, yVS, leftLineColor);
-		cv::Point pointVR = findPointOnImage(image, yVS, rightLineColor);
-		cv::Point pointBL = findPointOnImage(image, yBS, leftLineColor);
-		cv::Point pointBR = findPointOnImage(image, yBS, rightLineColor);
+
+		lineLeft = calculateGeneralLineEquation(leftPoints);
+		lineRight = calculateGeneralLineEquation(rightPoints);
+		cv::Point pointVL = calculatePointOnLine(lineLeft, yVS);
+		cv::Point pointVR = calculatePointOnLine(lineRight, yVS);
+		cv::Point pointBL = calculatePointOnLine(lineLeft, yBS);
+		cv::Point pointBR = calculatePointOnLine(lineRight, yBS);
 
 		//removing findingpoints errors
 		removeFindedPointErrors(*bufferPointsVL, pointVL);
 		removeFindedPointErrors(*bufferPointsVR, pointVR);
 		removeFindedPointErrors(*bufferPointsBL, pointBL);
 		removeFindedPointErrors(*bufferPointsBR, pointBR);
-		pointVL = bufferPointsVL->top();
-		pointVR = bufferPointsVR->top();
-		pointBL = bufferPointsBL->top();
-		pointBR = bufferPointsBR->top();
 
+		if (!bufferPointsVL->empty())
+			pointVL = bufferPointsVL->top();
+		else
+			pointVL = cv::Point(0,0);
+
+		if (!bufferPointsVR->empty())
+			pointVR = bufferPointsVR->top();
+		else
+			pointVR = cv::Point(0, image.size().height);
+
+		if (!bufferPointsBL->empty())
+			pointBL = bufferPointsBL->top();
+		else
+			pointBL = cv::Point(image.size().width, 0);
+
+		if (!bufferPointsBR->empty())
+			pointBR = bufferPointsBR->top();
+		else
+			pointBR = cv::Point(image.size().width, image.size().height);
 
 		int xBS = (pointBL.x + pointBR.x) / 2;
 		int xVS = (pointVL.x + pointVR.x) / 2;
 
-		double coefficient = (double)(leftPoints[0].x + leftPoints[1].x) /
-			(leftPoints[0].y + leftPoints[1].y);
 
 		//direction = (image.size().width / 2) > xBS ? 1 : 0;
 		double angle = (double)(atan((double)(xVS - xBS) / (yBS - yVS)) * 180 / PI);
 		double delta = image.size().width / 2 - xBS;
 
-		//removing angle errors
-		removeWheelAnglesErrors(angle);
+		//removing angle errors and save to bufferAngles
+		removeWheelAnglesErrors(angle, tolerance);
+
+		double actualAngle = bufferAngles.top();
+		//set passed wheel Steering
+		setWheelSteering(actualAngle, diffAngle);
+		//calculate final angle with correction and delta
+		double finalAngle = wheelSteering;
+		if (correction != 0 && delta != 0)
+		{
+			finalAngle = wheelSteering + correction  * delta;
+		}
+
+
+		//cout << "actual angle: " << actualAngle << " wheel steering: " << wheelSteering << " result: " << finalAngle << endl;
+
+		//cout << "uhol natocenia: " << bufferAngles.top() << "natocenie konies: " << wheelSteering << endl;
 
 		//show result
-		if (bufferAngles.top() > 0) { drawWheelAngle(image, bufferAngles.top(), xBS, yBS, xVS, yVS, rightLineColor); }
-		else { drawWheelAngle(image, bufferAngles.top(), xBS, yBS, xVS, yVS, leftLineColor); }
+		drawLaneAssist(image, wheelSteering, xBS, yBS, xVS, yVS, rightLineColor, leftLineColor);
+		//drawLaneAssist(image, finalAngle, xBS, yBS, xVS, yVS, rightLineColor, leftLineColor);
 
-		//result = { angle, delta, direction };
-		vector<double> result = { angle, delta };
-
-		return result;
+		return wheelSteering;
 	}
 
-	void drawWheelAngle(cv::Mat image, double alfa, int xBS, int yBS, int xVS,
-		int yVS, cv::Scalar color) {
+	void drawLaneAssist(cv::Mat image, double angle, int xBS, int yBS, int xVS,
+		int yVS, cv::Scalar rightLineColor, cv::Scalar leftLineColor) {
+		cv::Scalar whiteColor = cv::Scalar(0, 0, 0);
 		vector<cv::Point> middlePointsBS = { cv::Point(xBS, 0), cv::Point(xBS, yBS) };
 		vector<cv::Point> PointsS = { cv::Point(xBS, yBS), cv::Point(xVS, yVS) };
 		vector<cv::Point> extendPointsS = extendPoints(image, PointsS);
 
 		extendPointsS = ascendPoints(extendPointsS);
 		extendPointsS.at(1) = middlePointsBS.at(1);
-		
-		line(image, middlePointsBS.at(0), middlePointsBS.at(1), color, 2, 8, 0);
-		line(image, extendPointsS[0], extendPointsS[1], color, 2, 8, 0);
-		ellipse(image, cv::Point(xBS, yBS), cv::Size(150, 150), alfa, -90, -90 - alfa,
-			color, 3, 8);
+
+		//draw left line
+		if ((!bufferPointsBL->top().x == 0 && !bufferPointsBL->top().y == 0) || (bufferPointsVL->top().x == 0 && !bufferPointsVL->top().y == 0))
+		{
+			std::vector<cv::Point> points = { bufferPointsBL->top(), bufferPointsVL->top() };
+			points = extendPoints(image, points);
+			line(image, points[0], points[1], leftLineColor, 3, 10, 0);
+		}
+
+		//draw right line
+		if ((!bufferPointsBR->top().x == 0 && !bufferPointsBR->top().y == 0) || (bufferPointsVR->top().x == 0 && !bufferPointsVR->top().y == 0))
+		{
+			std::vector<cv::Point> points = { bufferPointsBR->top(), bufferPointsVR->top() };
+			points = extendPoints(image, points);
+			line(image, points[0], points[1], rightLineColor, 3, 10, 0);
+		}
+
+		//draw middle line
+		drawMiddleLine(image, cv::Scalar(255, 255, 255));
+
+		//draw angle
+		if (angle > 0)
+		{
+			line(image, middlePointsBS.at(0), middlePointsBS.at(1), rightLineColor, 3, 8, 0);
+			line(image, extendPointsS[0], extendPointsS[1], rightLineColor, 3, 8, 0);
+			ellipse(image, cv::Point(xBS, yBS), cv::Size(180, 180), angle, -90, -90 - angle, rightLineColor, 3, 8);
+		}
+		else if(angle < 0)
+		{
+			line(image, middlePointsBS.at(0), middlePointsBS.at(1), leftLineColor, 3, 8, 0);
+			line(image, extendPointsS[0], extendPointsS[1], leftLineColor, 3, 8, 0);
+			ellipse(image, cv::Point(xBS, yBS), cv::Size(180, 180), angle, -90, -90 - angle, leftLineColor, 3, 8);
+		}
+		//ellipse(image, cv::Point(xBS, yBS), cv::Size(150, 150), alfa, -90, -90 - alfa,
+			//color, 3, 8);
 	}
 
 	void drawMiddleLine(cv::Mat image, cv::Scalar color) {
 		cv::Point middlePointB(image.size().width / 2, image.size().height);
 		cv::Point middlePointV(image.size().width / 2, 0);
-		cv::line(image, middlePointB, middlePointV, cv::Scalar(255, 255, 255), 2, 8, 0);
+		cv::line(image, middlePointB, middlePointV, color, 2, 8, 0);
 	}
 
 	vector<vector<cv::Point>> findLines(cv::Mat image) {
@@ -460,20 +450,13 @@ public:
 	void removeFindedPointErrors(stack<cv::Point> &bufferPoints, cv::Point findedPoint)
 	{
 		cv::Point temp;
-		if (bufferPoints.empty())
+
+		//cout << "vrchol zasobnika: " << bufferPoints.top() << endl;
+		if (findedPoint.x >= 0 && findedPoint.y >= 0 && findedPoint.x != findedPoint.y != 0 )
 		{
+			//cout << "-----------------" << endl;
 			//cout << "ukladam do buffera: " << findedPoint << endl;
 			bufferPoints.push(findedPoint);
-		}
-		else
-		{
-			//cout << "vrchol zasobnika: " << bufferPoints.top() << endl;
-			if (!findedPoint.x == 0 && !findedPoint.y == 0)
-			{
-				//cout << "-----------------" << endl;
-				//cout << "ukladam do buffera: " << findedPoint << endl;
-				bufferPoints.push(findedPoint);
-			}
 		}
 
 		if (bufferPoints.size() > 3)
@@ -481,39 +464,35 @@ public:
 			temp = bufferPoints.top();
 			bufferPoints = stack<cv::Point>();
 			bufferPoints.push(temp);
-			cout << bufferPoints.size() << endl;
+			//cout << bufferPoints.size() << endl;
 		}
 	}
 
 	/*
-	metoda kontroluje posledny ulozeny uhol v bufferi a porovnava ho s aktualnym v pripade ze je aktualny <> aspon o 5 stupnov tak 
+	metoda kontroluje posledny ulozeny uhol v bufferi a porovnava ho s aktualnym v pripade ze je aktualny <> o toleranciu tak 
 	ho ulozi na vrchol zasobnika a okrem toho ho vrati
 	*/
-	void removeWheelAnglesErrors(double angle)
+	void removeWheelAnglesErrors(double angle, int tolerance)
 	{
 		double pom;
-		if (bufferAngles.empty() == false)
+		if (!bufferAngles.empty())
 		{
 			if (angle != bufferAngles.top())
-				{
+			{
 				//compare actual angle and angle on a top of buffer if is bigger than 5 degrees
-				if (angle > bufferAngles.top() && angle - bufferAngles.top() > 5)
+				if (angle > bufferAngles.top() && angle - bufferAngles.top() > tolerance)
 				{
 					bufferAngles.push(angle);
 				}
 				//compare actual angle and angle on a top of buffer if is smaller than 5 degrees
-				else if (angle < bufferAngles.top() && angle - bufferAngles.top()< 5)
+				else if (angle < bufferAngles.top() && angle - bufferAngles.top()< tolerance)
 				{
 					bufferAngles.push(angle);
 				}
 			}
 		}
-		else
-		{
-			bufferAngles.push(angle);
-		}
 
-		if (angle  < 5 && angle > -5)
+		if (bufferAngles.empty() || (angle  < tolerance && angle > -tolerance))
 		{
 			bufferAngles.push(0);
 		}
@@ -527,6 +506,14 @@ public:
 		}
 	}
 
+	//metoda upravuje uhol natocenia tak, aby bolo natacanie plynule o vhodne zvolenu hodnotu dolava alebo doprava
+	void setWheelSteering(double actualAngle, double diffAngle)
+	{
+		if (wheelSteering < actualAngle)
+			wheelSteering += diffAngle;
+		else if (wheelSteering > actualAngle)
+			wheelSteering -= diffAngle;
+	}
 
 	/*! \fn vector<Point> ascendPoints(vector<Point> points)
 	\brief Sort points ascending to vector according to y values.
@@ -560,24 +547,34 @@ public:
 		return extendPoints;
 	}
 
-	/*! \fn Point findPointOnImage(Mat image, int row, Scalar color)
-	\brief Find point on image according to specified row and input color.
-	\param image Input image.
-	\param row Number of a row on a image.
-	\param color Color, which he find in a row.
+	/*
+	vypocet vseobecnej rovnice priamky podla normaloveho vektora
+	vrati a, b, c vseobecnej rovnice priamky
 	*/
-	cv::Point findPointOnImage(cv::Mat image, int row, cv::Scalar targetColor) {
-		cv::Point point;
-		for (int j = 0; j < image.cols; j++) {
-			cv::Vec3b pointColor = image.at<cv::Vec3b>(cv::Point(j, row));
-			if (pointColor.val[0] == targetColor[0] &&
-				pointColor.val[1] == targetColor[1] &&
-				pointColor.val[2] == targetColor[2]) {
-				point = cv::Point(j, row);
-				return point;
-			}
-		}
-		return 0;
+	vector<double>  calculateGeneralLineEquation(vector<cv::Point> points)
+	{
+		double c;
+		cv::Point A, B, middle, normalVect;
+		vector<double> result;
+		A = cv::Point(points[0].x, points[0].y);
+		B = cv::Point(points[1].x, points[1].y);
+		middle = B - A;
+		normalVect = cv::Point(-middle.y, middle.x);
+		//calculate equation
+		c = -normalVect.x * A.x - normalVect.y * A.y;
+		result = { (double) normalVect.x, (double) normalVect.y, c};
+		return result;
+	}
+
+	/*
+	vstupom su body vseobecnej rovnice priamky a suradnice bodu y
+	podla vztahu vseobecnej rovnice priamky vypocita zo zadaneho bodu y suradnicu x a vrati bod (x,y)
+	*/
+	cv::Point calculatePointOnLine(vector<double> lineEquation, double yCoordinate)
+	{
+		double x;
+		x = ( (-lineEquation[2] - lineEquation[1] * yCoordinate) / lineEquation[0] );
+		return cv::Point(x, yCoordinate);
 	}
 
 	cv::Mat getFrame() { return frame1; }
